@@ -1,18 +1,5 @@
 User-agent: *
 Allow: /
 
-# AI crawlers welcome (GEO)
-User-agent: GPTBot
-Allow: /
-User-agent: OAI-SearchBot
-Allow: /
-User-agent: ChatGPT-User
-Allow: /
-User-agent: ClaudeBot
-Allow: /
-User-agent: PerplexityBot
-Allow: /
-User-agent: Google-Extended
-Allow: /
-
-Sitemap: https://hodayado1233-spec.github.io/hodigital/sitemap.xml
+# The site is currently set to noindex, nofollow via a meta tag in index.html.
+# Crawling stays allowed so search engines can read that tag.
