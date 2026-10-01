@@ -34,7 +34,7 @@
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify(db));
       localStorage.setItem(STORE_KEY + "-ui", JSON.stringify(ui));
-    } catch (e) { toast("השמירה בדפדפן נכשלה. הורידי גיבוי כדי לא לאבד נתונים."); }
+    } catch (e) { toast("השמירה בדפדפן נכשלה. יש להוריד גיבוי כדי לא לאבד נתונים."); }
   }
 
   // ---------- helpers ----------
@@ -171,7 +171,7 @@
         R.gsc.prev = { clicks: pc, impressions: pi, ctr: pi ? pc / pi : null, position: pi ? daily.reduce(function (a, x) { return a + (x.pp || 0) * (x.pi || 0); }, 0) / pi : null };
       }
       var m = daily.length ? daily[Math.floor(daily.length / 2)].k.slice(0, 7) : null;
-      if (m && m !== ui.month) toast("שימי לב: הנתונים בקובץ הם מ" + monthLabel(m) + ", והדוח הפתוח הוא של " + monthLabel(ui.month) + ".");
+      if (m && m !== ui.month) toast("שימו לב: הנתונים בקובץ הם מ" + monthLabel(m) + ", והדוח הפתוח הוא של " + monthLabel(ui.month) + ".");
     }
     return kind;
     function strip(x) { return { k: x.k, c: x.c, i: x.i, ctr: x.ctr, p: x.p }; }
@@ -181,7 +181,7 @@
   function readFiles(files, onText) {
     var jobs = Array.prototype.map.call(files, function (f) {
       if (/\.zip$/i.test(f.name)) {
-        if (!window.JSZip) return Promise.reject(new Error("לא ניתן לפתוח ZIP בלי חיבור לאינטרנט. חלצי את הקבצים והעלי את קובצי ה-CSV."));
+        if (!window.JSZip) return Promise.reject(new Error("לא ניתן לפתוח ZIP בלי חיבור לאינטרנט. יש לחלץ את הקבצים ולהעלות את קובצי ה-CSV."));
         return JSZip.loadAsync(f).then(function (z) {
           return Promise.all(Object.keys(z.files).filter(function (n) { return /\.csv$/i.test(n); }).map(function (n) {
             return z.files[n].async("string").then(function (t) { return { name: n, text: t }; });
@@ -196,7 +196,7 @@
   function importGscFiles(files) {
     var done = [];
     readFiles(files, function (f) { var k = importGscTable(parseCSV(f.text), f.name); if (k) done.push(k); })
-      .then(function () { save(); render(); toast(done.length ? "יובאו מ-Search Console: " + done.map(function (k) { return { queries: "ביטויים", pages: "עמודים", dates: "נתונים יומיים" }[k]; }).join(", ") : "לא זוהו קבצי Search Console. העלי את ה-ZIP או את Queries.csv, Pages.csv ו-Dates.csv."); })
+      .then(function () { save(); render(); toast(done.length ? "יובאו מ-Search Console: " + done.map(function (k) { return { queries: "ביטויים", pages: "עמודים", dates: "נתונים יומיים" }[k]; }).join(", ") : "לא זוהו קבצי Search Console. יש להעלות את ה-ZIP או את Queries.csv, Pages.csv ו-Dates.csv."); })
       .catch(function (e) { toast(e.message); });
   }
 
@@ -204,7 +204,7 @@
   function importGa(text) {
     var rows = parseCSV(text);
     var hi = rows.findIndex(function (r) { return r.some(function (c) { return /source|מקור/i.test(c); }); });
-    if (hi < 0) { toast("לא נמצאה עמודת מקור. ייצאי את הדוח \"רכישת תנועה\" עם המימד Session source / medium."); return; }
+    if (hi < 0) { toast("לא נמצאה עמודת מקור. יש לייצא את הדוח \"רכישת תנועה\" עם המימד Session source / medium."); return; }
     var header = rows[hi];
     var si = header.findIndex(function (c) { return /^sessions$|^סשנים$|^ביקורים$|^הפעלות$|sessions|סשנים/i.test(c.trim()); });
     if (si < 0) si = 1;
@@ -260,7 +260,7 @@
     renderClients();
     var main = $("#main"), c = client();
     if (!c) {
-      main.innerHTML = '<div class="step empty-state"><h2>אין עדיין לקוחות</h2><p>הוסיפי לקוח מימין, או טעני את הלקוח לדוגמה כדי לראות איך דוח נראה.</p></div>';
+      main.innerHTML = '<div class="step empty-state"><h2>אין עדיין לקוחות</h2><p>אפשר להוסיף לקוח מימין, או לטעון את הלקוח לדוגמה כדי לראות איך דוח נראה.</p></div>';
       return;
     }
     if (!ui.month) ui.month = lastFullMonth();
@@ -275,14 +275,14 @@
 
     // 1 Search Console
     h += step(1, "Search Console: כניסות מגוגל", g.clicks != null,
-      '<p class="hint">ב-Search Console: <b>ביצועים ← תוצאות חיפוש</b>, טווח תאריכים = החודש הקודם (אפשר להפעיל "השוואה" לחודש שלפניו), ואז <b>ייצוא ← הורדת CSV</b>. גררי לכאן את קובץ ה-ZIP כמו שהוא.</p>' +
-      dropZone("gscDrop", ".zip,.csv", "גררי את ה-ZIP מ-Search Console, או לחצי לבחירה", true) +
+      '<p class="hint">ב-Search Console: <b>ביצועים ← תוצאות חיפוש</b>, טווח תאריכים = החודש הקודם (אפשר להפעיל "השוואה" לחודש שלפניו), ואז <b>ייצוא ← הורדת CSV</b>. גוררים לכאן את קובץ ה-ZIP כמו שהוא.</p>' +
+      dropZone("gscDrop", ".zip,.csv", "גרירת ה-ZIP מ-Search Console לכאן, או לחיצה לבחירה", true) +
       (g.clicks != null ? '<div class="stats">' + stat("קליקים", fmt(g.clicks)) + stat("חשיפות", fmt(g.impressions)) + stat("CTR", g.ctr != null ? (g.ctr * 100).toFixed(1) + "%" : "—") + stat("מיקום ממוצע", g.position != null ? g.position.toFixed(1) : "—") + stat("ביטויים", (g.queries || []).length) + stat("עמודים", (g.pages || []).length) + "</div>" : ""));
 
     // 2 GA4
     h += step(2, "Analytics: כניסות ממנועי AI", ga.ai != null || ga.sessions != null,
-      '<p class="hint">ב-GA4: <b>דוחות ← רכישה ← רכישת תנועה</b>, החליפי את המימד ל-<span class="mono">Session source / medium</span>, טווח = החודש הקודם, ואז <b>שיתוף ← הורדת קובץ ← CSV</b>. הסטודיו מזהה לבד את ChatGPT, Gemini, Perplexity, Copilot, Claude ועוד.</p>' +
-      dropZone("gaDrop", ".csv,.txt", "גררי את קובץ ה-CSV מ-GA4, או לחצי לבחירה", false) +
+      '<p class="hint">ב-GA4: <b>דוחות ← רכישה ← רכישת תנועה</b>, מחליפים את המימד ל-<span class="mono">Session source / medium</span>, טווח = החודש הקודם, ואז <b>שיתוף ← הורדת קובץ ← CSV</b>. הסטודיו מזהה לבד את ChatGPT, Gemini, Perplexity, Copilot, Claude ועוד.</p>' +
+      dropZone("gaDrop", ".csv,.txt", "גרירת קובץ ה-CSV מ-GA4 לכאן, או לחיצה לבחירה", false) +
       '<div class="grid2">' + field("ga.sessions", "כל הכניסות לאתר", "number") + field("ga.organic", "כניסות מחיפוש אורגני", "number") + field("ga.ai", "כניסות ממנועי AI", "number") + "</div>" +
       listTable("ga.aiSources", [["name", "מקור AI", "text"], ["sessions", "כניסות", "number"]], "הוספת מקור"));
 
@@ -291,7 +291,7 @@
     h += step(3, "מיקומים בגוגל", (R.rankings || []).some(function (r) { return r.position != null; }),
       '<p class="hint">מריצים את <span class="mono">tools/rank-check.mjs</span> על המחשב שלך (דפדפן נסתר, google.co.il) ומעלים לכאן את קובץ התוצאות. אפשר גם להקליד מיקום ידנית. ריק = לא נמצא ב-30 התוצאות הראשונות.</p>' +
       '<details class="how"><summary>רשימת הביטויים להעתקה לסקריפט</summary><textarea id="kwList" style="margin-top:8px" dir="rtl">' + esc(kwText) + '</textarea><div class="btns" style="margin-top:6px"><button class="btn small" id="kwApply" type="button">עדכון רשימת הביטויים</button><button class="btn small" id="kwDownload" type="button">הורדת keywords.txt</button></div></details>' +
-      dropZone("rankDrop", ".json,.csv", "גררי את קובץ התוצאות של בודק המיקומים (JSON או CSV)", false) +
+      dropZone("rankDrop", ".json,.csv", "גרירת קובץ התוצאות של בודק המיקומים (JSON או CSV)", false) +
       listTable("rankings", [["keyword", "ביטוי", "text"], ["position", "מיקום", "number"], ["url", "עמוד מדורג", "url"], ["aiOverview.shown", "סקירת AI", "check"], ["aiOverview.cited", "האתר צוטט", "check"]], "הוספת ביטוי") +
       field("rankingsNote", "הערה מתחת לכותרת (תאריך הבדיקה)", "text"));
 
@@ -347,7 +347,7 @@
   function getTemplate() {
     if (templateCache) return Promise.resolve(templateCache);
     return fetch("report-template.html").then(function (r) { if (!r.ok) throw 0; return r.text(); }).then(function (t) { return (templateCache = t); })
-      .catch(function () { throw new Error("לא הצלחתי לטעון את תבנית הדוח. פתחי את הסטודיו דרך הכתובת באינטרנט (GitHub Pages) או דרך שרת מקומי, לא בלחיצה כפולה על הקובץ."); });
+      .catch(function () { throw new Error("לא הצלחתי לטעון את תבנית הדוח. יש לפתוח את הסטודיו דרך הכתובת באינטרנט (GitHub Pages) או דרך שרת מקומי, לא בלחיצה כפולה על הקובץ."); });
   }
   function buildHtml() {
     var data = buildReportData();
@@ -381,7 +381,7 @@
       case "previewBtn": case "previewBtn2": openPreview(); break;
       case "pvClose": $("#preview").hidden = true; break;
       case "pvDownload":
-        buildHtml().then(function (html) { download("seo-report-" + slugify(client().domain) + "-" + ui.month + ".html", html, "text/html;charset=utf-8"); toast("הדוח ירד. פתחי אותו ושלחי ללקוח, או הדפיסי ל-PDF."); }).catch(function (e) { toast(e.message); });
+        buildHtml().then(function (html) { download("seo-report-" + slugify(client().domain) + "-" + ui.month + ".html", html, "text/html;charset=utf-8"); toast("הדוח ירד. אפשר לשלוח אותו ללקוח, או לפתוח ולהדפיס ל-PDF."); }).catch(function (e) { toast(e.message); });
         break;
       case "backupBtn": download("hodigital-reports-backup-" + new Date().toISOString().slice(0, 10) + ".json", JSON.stringify(db, null, 1), "application/json"); break;
       case "demoBtn":

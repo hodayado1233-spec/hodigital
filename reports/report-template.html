@@ -344,7 +344,7 @@ footer{font-size:12px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 18p
   if(embedded){render(embedded);}
   else{
     fetch("samples/demo.json").then(function(r){return r.json();}).then(render).catch(function(){
-      document.getElementById("app").innerHTML='<p class="empty">הקובץ הזה הוא תבנית. פתחי את הסטודיו (index.html) כדי להפיק ממנו דוח.</p>';
+      document.getElementById("app").innerHTML='<p class="empty">הקובץ הזה הוא תבנית. כדי להפיק ממנו דוח, פותחים את הסטודיו (index.html).</p>';
     });
   }
   window.renderReport=render;

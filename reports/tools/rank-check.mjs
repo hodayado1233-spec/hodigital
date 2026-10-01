@@ -84,9 +84,9 @@ async function handleConsentAndCaptcha(page) {
   if (await consent.first().isVisible().catch(() => false)) { await consent.first().click(); await page.waitForLoadState("domcontentloaded"); }
   // Google "unusual traffic" page: wait for the person to solve it in the visible window.
   if (/\/sorry\//.test(page.url()) || (await page.locator("form#captcha-form, #recaptcha").count())) {
-    if (args.headless) throw new Error("גוגל ביקש CAPTCHA. הריצי שוב בלי --headless כדי לפתור אותו בחלון.");
+    if (args.headless) throw new Error("גוגל ביקש CAPTCHA. יש להריץ שוב בלי --headless כדי לפתור אותו בחלון.");
     const rl = createInterface({ input: process.stdin, output: process.stdout });
-    await rl.question("גוגל ביקש אימות (CAPTCHA). פתרי אותו בחלון הדפדפן ואז הקישי Enter כאן… ");
+    await rl.question("גוגל ביקש אימות (CAPTCHA). יש לפתור אותו בחלון הדפדפן ואז ללחוץ Enter כאן… ");
     rl.close();
     await page.waitForLoadState("domcontentloaded");
   }
