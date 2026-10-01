@@ -1,0 +1,13 @@
+{
+  "name": "hodigital-rank-check",
+  "private": true,
+  "type": "module",
+  "description": "Checks Google rankings in an incognito browser for the monthly SEO reports",
+  "scripts": {
+    "setup": "npm install && npx playwright install chromium",
+    "check": "node rank-check.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.55.0"
+  }
+}

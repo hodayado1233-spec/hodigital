@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>דוח SEO חודשי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600&family=Rubik:wght@500;700;800&display=swap">
+<style>
+/* Layout: one reading column; KPI strip up top, then one section per data source, each closing with the plain-language takeaway. */
+:root{
+  --bg:#f6f5f9; --surface:#ffffff; --surface-2:#efebff;
+  --ink:#0c0a10; --muted:#5b5667; --faint:#8a8496; --line:#e6e3ec;
+  --accent:#5a3ff0; --accent-soft:#c4b8ff; --mark:#7b61ff; --pop:#e0468f;
+  --good:#0f8a5f; --good-bg:#e3f6ee; --bad:#c2352b; --bad-bg:#fbe9e7; --flat:#6b6577;
+  --sans:'IBM Plex Sans Hebrew',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  --display:'Rubik','IBM Plex Sans Hebrew',system-ui,sans-serif;
+  --radius:14px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#07060b; --surface:#14111b; --surface-2:#1d1927;
+  --ink:#f3f1f8; --muted:#a39db1; --faint:#7d778b; --line:rgba(255,255,255,.1);
+  --accent:#c4b8ff; --accent-soft:#3a2f6e; --mark:#a996ff; --pop:#ff6fb5;
+  --good:#4fd6a0; --good-bg:rgba(52,211,153,.12); --bad:#ff8a80; --bad-bg:rgba(255,138,128,.12); --flat:#a39db1;
+  color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#07060b; --surface:#14111b; --surface-2:#1d1927;
+  --ink:#f3f1f8; --muted:#a39db1; --faint:#7d778b; --line:rgba(255,255,255,.1);
+  --accent:#c4b8ff; --accent-soft:#3a2f6e; --mark:#a996ff; --pop:#ff6fb5;
+  --good:#4fd6a0; --good-bg:rgba(52,211,153,.12); --bad:#ff8a80; --bad-bg:rgba(255,138,128,.12); --flat:#a39db1;
+  color-scheme:dark;}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.65 var(--sans)}
+.wrap{max-width:960px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:22px}
+h1,h2,h3{font-family:var(--display);line-height:1.2;text-wrap:balance;margin:0}
+.num,.tab{font-variant-numeric:tabular-nums}
+.ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
+
+/* Masthead */
+.mast{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.mast h1{font-size:clamp(26px,5vw,38px);font-weight:800;margin-top:4px}
+.mast .site{color:var(--muted);margin-top:2px}
+.mast .by{font-size:13px;color:var(--muted);text-align:left}
+.mast .by b{display:block;font-family:var(--display);color:var(--ink);font-size:16px;letter-spacing:.04em}
+.printbtn{font:600 13px var(--sans);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer;margin-top:8px}
+.printbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Summary */
+.summary{background:var(--surface-2);border-radius:var(--radius);padding:20px 22px;display:grid;gap:10px}
+.summary p{margin:0;max-width:68ch;font-size:16px}
+.summary ul{margin:0;padding-inline-start:20px;display:grid;gap:4px}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:grid;gap:2px;align-content:start}
+.kpi .lbl{font-size:13px;color:var(--muted);font-weight:500}
+.kpi .val{font:700 30px/1.15 var(--display);font-variant-numeric:tabular-nums}
+.kpi .src{font-size:11.5px;color:var(--faint)}
+.delta{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;border-radius:999px;padding:1px 8px;width:max-content;font-variant-numeric:tabular-nums}
+.delta.up{color:var(--good);background:var(--good-bg)}
+.delta.down{color:var(--bad);background:var(--bad-bg)}
+.delta.flat{color:var(--flat);background:var(--surface-2)}
+
+/* Sections */
+section.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;display:grid;gap:14px;min-width:0}
+.sec-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between}
+.sec-head h2{font-size:21px;font-weight:700}
+.sec-head .src{font-size:12px;color:var(--faint)}
+.lead{margin:0;color:var(--muted);max-width:70ch}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;min-width:0}
+.mini{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:13px;border:1px solid var(--line);border-radius:999px;padding:3px 11px;background:var(--bg)}
+.chip b{font-family:var(--display);font-variant-numeric:tabular-nums}
+
+/* Tables */
+.tbl{overflow-x:auto;min-width:0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:12px;font-weight:600;color:var(--muted);text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap}
+td .url{display:block;font-size:12px;color:var(--faint);direction:ltr;text-align:right;overflow-wrap:anywhere}
+.pos{font:700 16px var(--display);font-variant-numeric:tabular-nums}
+.pos.none{font:500 13px var(--sans);color:var(--faint)}
+.tag{font-size:11.5px;border-radius:6px;padding:1px 7px;background:var(--surface-2);color:var(--accent);white-space:nowrap}
+
+/* Charts */
+.chart{position:relative;min-width:0}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{fill:var(--muted);font:11px var(--sans);font-variant-numeric:tabular-nums}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .line{fill:none;stroke:var(--mark);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .area{fill:var(--mark);opacity:.12}
+.chart .dot{fill:var(--mark);stroke:var(--surface);stroke-width:2}
+.chart .cross{stroke:var(--faint);stroke-width:1;stroke-dasharray:3 3}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;border-radius:8px;padding:6px 10px;white-space:nowrap;transform:translate(-50%,-110%);font-variant-numeric:tabular-nums}
+.tip[hidden],.chart svg [hidden]{display:none}
+.bars{display:grid;gap:8px}
+.bar{display:grid;grid-template-columns:minmax(80px,140px) 1fr auto;gap:10px;align-items:center;font-size:14px}
+.bar .track{display:block;height:12px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.bar .fill{display:block;height:100%;border-radius:4px;background:var(--mark)}
+.bar .v{font:600 14px var(--display);font-variant-numeric:tabular-nums;min-width:3ch;text-align:left}
+.bar:hover .fill{background:var(--accent)}
+
+/* Optimization log */
+.log{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.log li{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.log li:last-child{border-bottom:0}
+.log .when{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums;padding-top:3px;min-width:44px}
+.log .what{display:grid;gap:3px;min-width:0}
+.log .what b{font-weight:600}
+.log .what span{color:var(--muted);font-size:14px}
+.next{margin:0;padding-inline-start:20px;display:grid;gap:6px}
+.empty{color:var(--faint);font-size:14px;margin:0}
+footer{font-size:12px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;border-top:1px solid var(--line);padding-top:14px}
+
+@media (max-width:560px){
+  .bar{grid-template-columns:minmax(70px,110px) 1fr auto}
+  section.card{padding:16px}
+}
+@media print{
+  :root{--bg:#fff;--surface:#fff;color-scheme:light}
+  body{font-size:12.5px}
+  .wrap{padding-block:0;gap:14px}
+  .printbtn{display:none}
+  section.card,.kpi,.summary{break-inside:avoid;border-color:#ddd}
+}
+@media (prefers-reduced-motion:no-preference){.bar .fill{transition:width .5s ease}}
+</style>
+</head>
+<body>
+<main class="wrap" id="app"><p class="empty">טוען דוח…</p></main>
+
+<!-- הסטודיו מחליף את התוכן הזה בנתוני הדוח בזמן ההורדה -->
+<script id="report-data" type="application/json">null</script>
+<script>
+(function(){
+  "use strict";
+  var HEB_MONTHS=["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+  var nf=new Intl.NumberFormat("he-IL");
+  function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+  function num(v){return v==null||isNaN(v)?"—":nf.format(Math.round(v));}
+  function pct(v){return v==null||isNaN(v)?"—":(v*100).toFixed(1)+"%";}
+  function pos1(v){return v==null||isNaN(v)?"—":Number(v).toFixed(1);}
+  function monthLabel(m){if(!m)return "";var p=m.split("-");return HEB_MONTHS[+p[1]-1]+" "+p[0];}
+  function shortDate(d){var p=String(d).split("-");return p.length===3?(+p[2])+"."+(+p[1]):d;}
+  function has(v){return v!=null&&v!==""&&!isNaN(v);}
+
+  // Change badge. lowerIsBetter flips the color logic (used for average position).
+  function delta(cur,prev,opts){
+    opts=opts||{};
+    if(!has(cur)||!has(prev))return "";
+    var diff=cur-prev;
+    if(opts.lowerIsBetter)diff=-diff;
+    var cls=Math.abs(diff)<1e-9?"flat":diff>0?"up":"down";
+    var arrow=cls==="up"?"▲":cls==="down"?"▼":"●";
+    var txt;
+    if(opts.abs){txt=Math.abs(cur-prev).toFixed(opts.digits||0);}
+    else if(prev===0){txt=cur>0?"חדש":"0%";}
+    else{txt=Math.abs((cur-prev)/prev*100).toFixed(0)+"%";}
+    return '<span class="delta '+cls+'" title="לעומת החודש הקודם: '+esc(opts.abs?pos1(prev):num(prev))+'">'+arrow+" "+txt+"</span>";
+  }
+
+  function kpi(lbl,val,d,src){
+    return '<div class="kpi"><span class="lbl">'+esc(lbl)+'</span><span class="val">'+val+"</span>"+(d||"")+'<span class="src">'+esc(src)+"</span></div>";
+  }
+
+  // Single-series line/area chart with crosshair tooltip. Time flows right-to-left to match Hebrew reading.
+  function lineChart(points,label){
+    if(!points||points.length<2)return '<p class="empty">אין נתונים יומיים לחודש הזה.</p>';
+    var W=720,H=220,pl=40,pr=12,pt=14,pb=26;
+    var max=Math.max.apply(null,points.map(function(p){return p.v;}));
+    var nice=niceMax(max);
+    var step=(W-pl-pr)/(points.length-1);
+    function x(i){return W-pr-i*step;}
+    function y(v){return pt+(H-pt-pb)*(1-v/nice);}
+    var g="";
+    for(var k=0;k<=4;k++){var gv=nice*k/4,gy=y(gv);g+='<line class="grid" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+gy+'" y2="'+gy+'"/><text x="'+(pl-6)+'" y="'+(gy+4)+'" text-anchor="end">'+num(gv)+"</text>";}
+    var every=Math.ceil(points.length/7);
+    points.forEach(function(p,i){if(i%every===0||i===points.length-1)g+='<text x="'+x(i)+'" y="'+(H-6)+'" text-anchor="middle">'+esc(shortDate(p.d))+"</text>";});
+    var path=points.map(function(p,i){return (i?"L":"M")+x(i).toFixed(1)+" "+y(p.v).toFixed(1);}).join(" ");
+    var area=path+" L"+x(points.length-1)+" "+y(0)+" L"+x(0)+" "+y(0)+" Z";
+    var last=points[points.length-1];
+    var id="c"+Math.random().toString(36).slice(2,8);
+    var svg='<div class="chart" id="'+id+'" data-label="'+esc(label)+'"><svg viewBox="0 0 '+W+" "+H+'" role="img" aria-label="'+esc(label)+'">'+g+
+      '<path class="area" d="'+area+'"/><path class="line" d="'+path+'"/>'+
+      '<circle class="dot" r="4.5" cx="'+x(points.length-1)+'" cy="'+y(last.v)+'"/>'+
+      '<line class="cross" hidden y1="'+pt+'" y2="'+(H-pb)+'"/><circle class="dot hov" r="5" hidden/>'+
+      '<rect x="'+pl+'" y="0" width="'+(W-pl-pr)+'" height="'+H+'" fill="transparent" class="hit"/></svg><div class="tip" hidden></div></div>';
+    pendingCharts.push({id:id,points:points,x:x,y:y,W:W,step:step,pr:pr});
+    return svg;
+  }
+  function niceMax(v){if(v<=0)return 1;var e=Math.pow(10,Math.floor(Math.log10(v)));var f=v/e;var n=f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10;return n*e;}
+  var pendingCharts=[];
+  function wireCharts(){
+    pendingCharts.forEach(function(c){
+      var root=document.getElementById(c.id);if(!root)return;
+      var svg=root.querySelector("svg"),hit=root.querySelector(".hit"),cross=root.querySelector(".cross"),dot=root.querySelector(".hov"),tip=root.querySelector(".tip");
+      function show(ev){
+        var r=svg.getBoundingClientRect();var sx=(ev.clientX-r.left)*c.W/r.width;
+        var i=Math.round((c.W-c.pr-sx)/c.step);i=Math.max(0,Math.min(c.points.length-1,i));
+        var p=c.points[i],px=c.x(i),py=c.y(p.v);
+        cross.setAttribute("x1",px);cross.setAttribute("x2",px);cross.removeAttribute("hidden");
+        dot.setAttribute("cx",px);dot.setAttribute("cy",py);dot.removeAttribute("hidden");
+        tip.innerHTML=esc(shortDate(p.d))+" · <b>"+num(p.v)+"</b> "+esc(root.dataset.label);
+        tip.style.left=(px*r.width/c.W)+"px";tip.style.top=(py*r.width/c.W)+"px";tip.hidden=false;
+      }
+      function hide(){cross.setAttribute("hidden","");dot.setAttribute("hidden","");tip.hidden=true;}
+      hit.addEventListener("pointermove",show);hit.addEventListener("pointerdown",show);hit.addEventListener("pointerleave",hide);
+    });
+    pendingCharts=[];
+  }
+
+  function bars(items,valueKey,labelKey,unit){
+    items=(items||[]).filter(function(i){return i[valueKey]>0;});
+    if(!items.length)return '<p class="empty">לא נרשמו נתונים החודש.</p>';
+    var max=Math.max.apply(null,items.map(function(i){return i[valueKey];}));
+    return '<div class="bars">'+items.map(function(i){
+      var w=Math.max(2,i[valueKey]/max*100);
+      return '<div class="bar" title="'+esc(i[labelKey])+": "+num(i[valueKey])+" "+esc(unit)+'"><span>'+esc(i[labelKey])+'</span><span class="track"><span class="fill" style="width:'+w.toFixed(1)+'%"></span></span><span class="v">'+num(i[valueKey])+"</span></div>";
+    }).join("")+"</div>";
+  }
+
+  function render(R){
+    var app=document.getElementById("app");
+    var g=R.gsc||{},gp=R.gscPrev||{},ga=R.ga||{},gap=R.gaPrev||{},L=R.leads||{},Lp=R.leadsPrev||{};
+    var client=R.client||{},agency=R.agency||{};
+    document.title="דוח SEO · "+(client.name||"")+" · "+monthLabel(R.month);
+    var h="";
+
+    // Masthead
+    h+='<header class="mast"><div><div class="eyebrow">דוח קידום אורגני חודשי</div><h1>'+esc(client.name||"")+" · "+esc(monthLabel(R.month))+'</h1><div class="site"><span class="ltr">'+esc(client.domain||"")+'</span></div></div>'+
+       '<div class="by"><b>'+esc(agency.name||"HODIGITAL")+"</b>"+esc(agency.contact||"")+'<br><button class="printbtn" id="printBtn" type="button" hidden>הדפסה / שמירה כ-PDF</button></div></header>';
+
+    // Summary
+    if(R.summary||(R.highlights&&R.highlights.length)){
+      h+='<div class="summary"><h2 style="font-size:18px">בשורה התחתונה</h2>'+(R.summary?"<p>"+esc(R.summary)+"</p>":"")+
+        (R.highlights&&R.highlights.length?"<ul>"+R.highlights.map(function(x){return "<li>"+esc(x)+"</li>";}).join("")+"</ul>":"")+"</div>";
+    }
+
+    // KPI strip
+    var rk=R.rankings||[];
+    var top10=rk.filter(function(r){return has(r.position)&&r.position<=10;}).length;
+    var top10p=rk.filter(function(r){return has(r.prev)&&r.prev<=10;}).length;
+    var anyPrevRank=rk.some(function(r){return r.prev!==undefined;});
+    h+='<div class="kpis">'+
+      kpi("כניסות מגוגל (קליקים)",num(g.clicks),delta(g.clicks,gp.clicks),"Google Search Console")+
+      kpi("כניסות ממנועי AI",num(ga.ai),delta(ga.ai,gap.ai),"Google Analytics 4")+
+      kpi("לידים מהאתר",num(L.total),delta(L.total,Lp.total),"טפסים, שיחות ווואטסאפ")+
+      kpi("ביטויים בעמוד הראשון",rk.length?top10+'<span style="font-size:16px;color:var(--faint)"> / '+rk.length+"</span>":"—",anyPrevRank?delta(top10,top10p,{abs:true}):"","בדיקת מיקומים ידנית")+
+      "</div>";
+
+    // Organic search
+    h+='<section class="card"><div class="sec-head"><h2>חיפוש אורגני בגוגל</h2><span class="src">מקור: Google Search Console</span></div>'+
+      '<div class="mini"><span class="chip">חשיפות <b>'+num(g.impressions)+"</b> "+delta(g.impressions,gp.impressions)+'</span><span class="chip">שיעור הקלקה <b>'+pct(g.ctr)+"</b></span>"+
+      '<span class="chip">מיקום ממוצע <b>'+pos1(g.position)+"</b> "+delta(g.position,gp.position,{lowerIsBetter:true,abs:true,digits:1})+"</span></div>"+
+      lineChart((g.daily||[]).map(function(d){return {d:d.d,v:d.c};}),"קליקים")+
+      '<div class="row">'+topTable("ביטויים שהביאו הכי הרבה כניסות",g.queries,"ביטוי")+topTable("העמודים החזקים באתר",g.pages,"עמוד",true)+"</div></section>";
+
+    // Rankings
+    h+='<section class="card"><div class="sec-head"><h2>מיקומים בגוגל לביטויי היעד</h2><span class="src">'+esc(R.rankingsNote||"נבדק בדפדפן נסתר, google.co.il")+"</span></div>"+rankTable(rk)+"</section>";
+
+    // AI traffic
+    h+='<section class="card"><div class="sec-head"><h2>כניסות ממנועי AI</h2><span class="src">מקור: Google Analytics 4</span></div>'+
+      '<p class="lead">ביקורים שהגיעו מקישור בתשובה של ChatGPT, Gemini, Perplexity, Copilot ו-Claude. זה הערוץ שגדל הכי מהר בחיפוש, ושם רואים אם העסק מופיע כשממליצים בתחום.</p>'+
+      '<div class="mini"><span class="chip">סה"כ <b>'+num(ga.ai)+"</b> "+delta(ga.ai,gap.ai)+"</span>"+(has(ga.sessions)&&has(ga.ai)&&ga.sessions>0?'<span class="chip">מתוך כל הכניסות לאתר <b>'+pct(ga.ai/ga.sessions)+"</b></span>":"")+
+      (has(ga.organic)?'<span class="chip">כניסות אורגניות (כל המנועים) <b>'+num(ga.organic)+"</b> "+delta(ga.organic,gap.organic)+"</span>":"")+"</div>"+
+      bars(ga.aiSources,"sessions","name","כניסות")+aiOverviewLine(rk)+"</section>";
+
+    // Leads
+    h+='<section class="card"><div class="sec-head"><h2>לידים שהתקבלו באתר</h2><span class="src">'+esc(L.source||"טפסים, קליקים לטלפון ולוואטסאפ")+"</span></div>"+
+      '<div class="mini"><span class="chip">סה"כ לידים <b>'+num(L.total)+"</b> "+delta(L.total,Lp.total)+"</span>"+
+      (has(L.organic)?'<span class="chip">מתוכם מחיפוש אורגני ו-AI <b>'+num(L.organic)+"</b></span>":"")+"</div>"+
+      bars(L.channels,"count","name","לידים")+(L.note?'<p class="lead">'+esc(L.note)+"</p>":"")+"</section>";
+
+    // History
+    if(R.history&&R.history.length>1){
+      h+='<section class="card"><div class="sec-head"><h2>המגמה לאורך החודשים</h2><span class="src">קליקים מגוגל לפי חודש</span></div>'+
+        lineChart(R.history.map(function(m){return {d:m.month,v:m.clicks||0};}),"קליקים")+
+        '<div class="tbl"><table><thead><tr><th>חודש</th><th class="n">קליקים מגוגל</th><th class="n">כניסות AI</th><th class="n">לידים</th></tr></thead><tbody>'+
+        R.history.map(function(m){return "<tr><td>"+esc(monthLabel(m.month))+'</td><td class="n">'+num(m.clicks)+'</td><td class="n">'+num(m.ai)+'</td><td class="n">'+num(m.leads)+"</td></tr>";}).join("")+"</tbody></table></div></section>";
+    }
+
+    // Optimizations
+    var ops=R.optimizations||[];
+    h+='<section class="card"><div class="sec-head"><h2>מה עשינו באתר החודש</h2><span class="src">'+ops.length+" פעולות</span></div>"+
+      (ops.length?'<ul class="log">'+ops.map(function(o){
+        return '<li><span class="when">'+esc(o.date?shortDate(o.date):"")+'</span><div class="what"><div><span class="tag">'+esc(o.category||"כללי")+"</span> <b>"+esc(o.title)+"</b></div>"+(o.detail?"<span>"+esc(o.detail)+"</span>":"")+(o.url?'<span class="url" style="direction:ltr;text-align:right;font-size:12px;color:var(--faint)">'+esc(o.url)+"</span>":"")+"</div></li>";
+      }).join("")+"</ul>":'<p class="empty">לא נרשמו פעולות.</p>')+"</section>";
+
+    // Next steps
+    if(R.nextSteps&&R.nextSteps.length){
+      h+='<section class="card"><div class="sec-head"><h2>התוכנית לחודש הבא</h2></div><ol class="next">'+R.nextSteps.map(function(s){return "<li>"+esc(s)+"</li>";}).join("")+"</ol></section>";
+    }
+
+    h+="<footer><span>הופק "+esc(R.generatedAt||"")+"</span><span>"+esc(agency.name||"HODIGITAL")+(agency.contact?" · "+esc(agency.contact):"")+"</span></footer>";
+    app.innerHTML=h;
+    wireCharts();
+    var pb=document.getElementById("printBtn");
+    if(window.self===window.top){pb.hidden=false;pb.addEventListener("click",function(){window.print();});}
+  }
+
+  function topTable(title,rows,keyLabel,isUrl){
+    rows=(rows||[]).slice(0,10);
+    if(!rows.length)return '<div><h3 style="font-size:15px;margin-bottom:6px">'+esc(title)+'</h3><p class="empty">אין נתונים.</p></div>';
+    return '<div style="min-width:0"><h3 style="font-size:15px;margin-bottom:6px">'+esc(title)+'</h3><div class="tbl"><table><thead><tr><th>'+esc(keyLabel)+'</th><th class="n">קליקים</th><th class="n">חשיפות</th><th class="n">מיקום</th></tr></thead><tbody>'+
+      rows.map(function(r){
+        var k=isUrl?'<span class="url">'+esc(String(r.k).replace(/^https?:\/\/[^/]+/,"")||"/")+"</span>":esc(r.k);
+        return "<tr><td>"+k+'</td><td class="n">'+num(r.c)+'</td><td class="n">'+num(r.i)+'</td><td class="n">'+pos1(r.p)+"</td></tr>";
+      }).join("")+"</tbody></table></div></div>";
+  }
+
+  function rankTable(rk){
+    if(!rk.length)return '<p class="empty">לא נבדקו מיקומים החודש.</p>';
+    var b={top3:0,top10:0,top30:0,out:0};
+    rk.forEach(function(r){if(!has(r.position))b.out++;else if(r.position<=3)b.top3++;else if(r.position<=10)b.top10++;else b.top30++;});
+    var sorted=rk.slice().sort(function(a,b2){return (has(a.position)?a.position:999)-(has(b2.position)?b2.position:999);});
+    return '<div class="mini"><span class="chip">מקומות 1–3 <b>'+b.top3+'</b></span><span class="chip">מקומות 4–10 <b>'+b.top10+'</b></span><span class="chip">עמודים 2–3 <b>'+b.top30+'</b></span><span class="chip">מחוץ ל-30 <b>'+b.out+"</b></span></div>"+
+      '<div class="tbl"><table><thead><tr><th>ביטוי</th><th class="n">מיקום</th><th class="n">שינוי</th><th>עמוד מדורג</th></tr></thead><tbody>'+
+      sorted.map(function(r){
+        var p=has(r.position)?'<span class="pos">'+r.position+"</span>":'<span class="pos none">מחוץ ל-30</span>';
+        var ch="";
+        if(has(r.position)&&has(r.prev)){var d=r.prev-r.position;ch='<span class="delta '+(d>0?"up":d<0?"down":"flat")+'">'+(d>0?"▲ "+d:d<0?"▼ "+(-d):"● 0")+"</span>";}
+        else if(has(r.position)&&r.prev===null){ch='<span class="delta up">נכנס</span>';}
+        else if(!has(r.position)&&has(r.prev)){ch='<span class="delta down">יצא</span>';}
+        return "<tr><td>"+esc(r.keyword)+'</td><td class="n">'+p+'</td><td class="n">'+ch+'</td><td><span class="url">'+esc(r.url?String(r.url).replace(/^https?:\/\/[^/]+/,"")||"/":"")+"</span></td></tr>";
+      }).join("")+"</tbody></table></div>";
+  }
+
+  function aiOverviewLine(rk){
+    var shown=rk.filter(function(r){return r.aiOverview&&r.aiOverview.shown;});
+    if(!shown.length)return "";
+    var cited=shown.filter(function(r){return r.aiOverview.cited;});
+    return '<p class="lead">סקירת AI של גוגל הופיעה ב-'+shown.length+" מתוך "+rk.length+" ביטויי היעד, והאתר צוטט בה ב-"+cited.length+" מהם"+(cited.length?": "+cited.map(function(r){return esc(r.keyword);}).join(", "):"")+".</p>";
+  }
+
+  var embedded=null;
+  try{embedded=JSON.parse(document.getElementById("report-data").textContent);}catch(e){}
+  if(embedded){render(embedded);}
+  else{
+    fetch("samples/demo.json").then(function(r){return r.json();}).then(render).catch(function(){
+      document.getElementById("app").innerHTML='<p class="empty">הקובץ הזה הוא תבנית. פתחי את הסטודיו (index.html) כדי להפיק ממנו דוח.</p>';
+    });
+  }
+  window.renderReport=render;
+})();
+</script>
+</body>
+</html>
