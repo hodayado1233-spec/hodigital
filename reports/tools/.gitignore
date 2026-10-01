@@ -2,3 +2,6 @@ node_modules/
 rankings-*.json
 rankings-*.csv
 keywords*.txt
+service-account*.json
+clients.json
+month-*.json

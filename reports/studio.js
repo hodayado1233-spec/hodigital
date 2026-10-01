@@ -229,7 +229,7 @@
   // Rank checker output (JSON array) or CSV with keyword,position,url.
   function importRankings(text) {
     var list;
-    try { list = JSON.parse(text); if (list.results) list = list.results; } catch (e) {
+    try { list = typeof text === "string" ? JSON.parse(text) : text; if (list.results) list = list.results; } catch (e) {
       list = parseCSV(text).filter(function (r, i) { return !(i === 0 && /keyword|ביטוי/i.test(r[0])); })
         .map(function (r) { return { keyword: r[0], position: toNum(r[1]), url: r[2] || "" }; });
     }
@@ -245,6 +245,45 @@
       n++;
     });
     save(); render(); toast("עודכנו " + n + " ביטויים.");
+    return n;
+  }
+
+  // Files from tools/fetch-google.mjs (type "hodigital-month") and/or the rank checker, in one drop.
+  function importAuto(files) {
+    Promise.all(Array.prototype.map.call(files, function (f) { return f.text().then(function (t) { return { name: f.name, text: t }; }); })).then(function (list) {
+      var parsed = list.map(function (f) { try { return { name: f.name, data: JSON.parse(f.text) }; } catch (e) { return { name: f.name, data: null }; } });
+      var msgs = [];
+      parsed.filter(function (f) { return f.data && f.data.type === "hodigital-month"; }).forEach(function (f) { msgs.push(importBundle(f.data)); });
+      parsed.filter(function (f) { return Array.isArray(f.data) || (f.data && f.data.results); }).forEach(function (f) {
+        // rank-check.mjs names its output rankings-<domain>-<date>.json
+        var m = f.name.match(/^rankings-(.+)-\d{4}-\d{2}-\d{2}/);
+        var owner = m && Object.keys(db.clients).find(function (k) { return bareDomain(db.clients[k].domain) === m[1]; });
+        if (owner) ui.client = owner;
+        if (!client()) { msgs.push("קובץ המיקומים " + f.name + " דולג: צריך לבחור לקוח קודם"); return; }
+        msgs.push(importRankings(f.data) + " ביטויים עודכנו");
+      });
+      var bad = parsed.filter(function (f) { return !f.data || !(f.data.type === "hodigital-month" || Array.isArray(f.data) || f.data.results); });
+      if (bad.length) msgs.push("לא זוהו: " + bad.map(function (f) { return f.name; }).join(", "));
+      save(); render(); toast(msgs.join(" · "));
+    });
+  }
+  function bareDomain(d) { return String(d || "").toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, ""); }
+  function importBundle(b) {
+    var want = bareDomain(b.client.domain);
+    var id = Object.keys(db.clients).find(function (k) { return bareDomain(db.clients[k].domain) === want; });
+    if (!id) { id = slugify(b.client.domain); db.clients[id] = { name: b.client.name || b.client.domain, domain: b.client.domain, months: {} }; }
+    ui.client = id; ui.month = b.month;
+    var R = report();
+    if (b.gsc) R.gsc = b.gsc;
+    if (b.ga) { R.ga = { sessions: b.ga.sessions, organic: b.ga.organic, ai: b.ga.ai, aiSources: b.ga.aiSources || [] }; }
+    if (b.leads) { R.leads.channels = b.leads.channels || []; R.leads.organic = b.leads.organic; R.leads.source = b.leads.source || R.leads.source; }
+    // First month on the platform: keep last month's numbers so the report can compare and chart.
+    var pm = prevMonth(b.month), c = db.clients[id];
+    if (!c.months[pm]) {
+      c.months[pm] = { gsc: b.gsc && b.gsc.prev ? b.gsc.prev : {}, ga: b.ga && b.ga.prev ? Object.assign({ aiSources: [] }, b.ga.prev) : { aiSources: [] },
+        leads: { channels: b.leads && b.leads.prev ? b.leads.prev.channels : [] }, rankings: [], optimizations: [], summary: "", highlights: [], nextSteps: [], comparisonOnly: true };
+    }
+    return c.name + ", " + monthLabel(b.month) + ": נתוני Google יובאו";
   }
 
   // ---------- rendering ----------
@@ -260,7 +299,7 @@
     renderClients();
     var main = $("#main"), c = client();
     if (!c) {
-      main.innerHTML = '<div class="step empty-state"><h2>אין עדיין לקוחות</h2><p>אפשר להוסיף לקוח מימין, או לטעון את הלקוח לדוגמה כדי לראות איך דוח נראה.</p></div>';
+      main.innerHTML = '<div class="step empty-state"><h2>אין עדיין לקוחות</h2><p>אפשר להוסיף לקוח מימין, לטעון את הלקוח לדוגמה, או לגרור לכאן קובץ month-….json מהסקריפט האוטומטי והלקוח ייווצר ממנו.</p>' + dropZone("autoDrop", ".json", "ייבוא אוטומטי: גרירת קובצי month-….json ו-rankings-….json", true) + "</div>";
       return;
     }
     if (!ui.month) ui.month = lastFullMonth();
@@ -272,6 +311,9 @@
       '<div class="btns"><label>חודש הדוח<input type="month" id="monthPick" value="' + ui.month + '"></label>' +
       (months.length ? '<label>חודשים שמורים<select id="monthSel">' + months.map(function (m) { return '<option value="' + m + '"' + (m === ui.month ? " selected" : "") + ">" + monthLabel(m) + "</option>"; }).join("") + "</select></label>" : "") +
       '<button class="btn primary" id="previewBtn" type="button">תצוגה מקדימה והורדה</button></div></div>';
+
+    h += '<section class="step"><div class="step-head"><h2>ייבוא אוטומטי</h2></div><p class="hint">מי שהגדיר את <span class="mono">tools/fetch-google.mjs</span> מריץ אותו פעם בחודש ומקבל לכל לקוח קובץ <span class="mono">month-….json</span> עם הנתונים מ-Search Console ומ-GA4, כולל הלידים. גוררים לכאן את הקבצים יחד עם קובץ המיקומים, ושלבים 1, 2 ו-4 מתמלאים לבד. מי שלא הגדיר יכול לעבוד עם הייצוא הידני בשלבים למטה.</p>' +
+      dropZone("autoDrop", ".json", "גרירת קובצי month-….json ו-rankings-….json לכאן, או לחיצה לבחירה", true) + "</section>";
 
     // 1 Search Console
     h += step(1, "Search Console: כניסות מגוגל", g.clicks != null,
@@ -436,6 +478,7 @@
 
   function handleDrop(id, files) {
     if (id === "gscDrop") return importGscFiles(files);
+    if (id === "autoDrop") return importAuto(files);
     files[0].text().then(function (txt) { if (id === "gaDrop") importGa(txt); if (id === "rankDrop") importRankings(txt); });
   }
   ["dragover", "dragleave", "drop"].forEach(function (ev) {

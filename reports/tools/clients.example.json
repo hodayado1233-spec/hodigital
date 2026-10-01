@@ -1,0 +1,19 @@
+[
+  {
+    "name": "מרפאת שיניים לדוגמה",
+    "domain": "www.example.co.il",
+    "gscSite": "sc-domain:example.co.il",
+    "ga4Property": "123456789",
+    "leadEvents": {
+      "click_whatsapp": "וואטסאפ",
+      "generate_lead": "טופס יצירת קשר",
+      "click_phone": "שיחת טלפון"
+    }
+  },
+  {
+    "name": "לקוח בלי מיפוי אירועים",
+    "domain": "www.another-example.co.il",
+    "gscSite": "https://www.another-example.co.il/",
+    "ga4Property": "987654321"
+  }
+]

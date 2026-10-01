@@ -252,7 +252,7 @@ footer{font-size:12px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 18p
       kpi("כניסות מגוגל (קליקים)",num(g.clicks),delta(g.clicks,gp.clicks),"Google Search Console")+
       kpi("כניסות ממנועי AI",num(ga.ai),delta(ga.ai,gap.ai),"Google Analytics 4")+
       kpi("לידים מהאתר",num(L.total),delta(L.total,Lp.total),"טפסים, שיחות ווואטסאפ")+
-      kpi("ביטויים בעמוד הראשון",rk.length?top10+'<span style="font-size:16px;color:var(--faint)"> / '+rk.length+"</span>":"—",anyPrevRank?delta(top10,top10p,{abs:true}):"","בדיקת מיקומים ידנית")+
+      kpi("ביטויים בעמוד הראשון",rk.length?top10+'<span style="font-size:16px;color:var(--faint)"> / '+rk.length+"</span>":"—",anyPrevRank?delta(top10,top10p,{abs:true}):"","בדיקת מיקומים בגוגל")+
       "</div>";
 
     // Organic search
