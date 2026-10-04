@@ -34,18 +34,21 @@ const AI_SOURCES = [
 const aiName = (src) => (AI_SOURCES.find(([, re]) => re.test(src)) || [])[0] || null;
 
 const args = parseArgs(process.argv.slice(2));
-const keyPath = args.key || "service-account.json";
-const configPath = args.config || "clients.json";
-if (!existsSync(keyPath)) fail(`לא נמצא קובץ המפתח ${keyPath}. ההוראות להורדה שלו ב-README, בפרק "חיבור אוטומטי ל-Google".`);
-if (!existsSync(configPath)) fail(`לא נמצא ${configPath}. אפשר להעתיק את clients.example.json ל-clients.json ולמלא את הלקוחות.`);
-
-const key = JSON.parse(readFileSync(keyPath, "utf8"));
-let clients = JSON.parse(readFileSync(configPath, "utf8"));
+// In the cloud the key and client list come from environment variables
+// (GOOGLE_SA_KEY, HD_CLIENTS: JSON text or base64); on a computer, from files.
+const key = readJson("GOOGLE_SA_KEY", args.key || "service-account.json",
+  `לא נמצא מפתח. על המחשב: קובץ service-account.json (ההוראות ב-README, "חיבור אוטומטי ל-Google"). בענן: משתנה הסביבה GOOGLE_SA_KEY.`);
+let clients = readJson("HD_CLIENTS", args.config || "clients.json",
+  `לא נמצאה רשימת לקוחות. על המחשב: להעתיק את clients.example.json ל-clients.json ולמלא. בענן: משתנה הסביבה HD_CLIENTS.`);
+const outDir = args["out-dir"] || ".";
 if (args.client) clients = clients.filter((c) => bare(c.domain).includes(bare(args.client)));
 if (!clients.length) fail("אין לקוחות שמתאימים לבחירה.");
 
 const month = args.month || lastFullMonth();
 const prev = prevMonth(month);
+// Search Console finalizes data after 2–3 days. Run early in the next month, the last days are
+// still provisional: include them ("all") instead of dropping them, and say so.
+const fresh = new Date() < new Date(`${nextMonth(month)}-04T00:00:00`);
 const token = await getToken(key);
 console.log(`מושך נתונים ל${month} (והשוואה ל-${prev}) עבור ${clients.length} לקוחות. חשבון השירות: ${key.client_email}\n`);
 
@@ -59,7 +62,7 @@ for (const c of clients) {
   if (c.ga4Property) {
     try { Object.assign(out, await fetchGa(String(c.ga4Property).replace(/^properties\//, ""), c.leadEvents)); } catch (e) { problems.push("GA4: " + e.message); }
   }
-  const file = `month-${bare(c.domain).replace(/[^a-z0-9]+/g, "-")}-${month}.json`;
+  const file = `${outDir}/month-${bare(c.domain).replace(/[^a-z0-9]+/g, "-")}-${month}.json`;
   if (out.gsc || out.ga) writeFileSync(file, JSON.stringify(out, null, 1));
   const g = out.gsc || {}, ga = out.ga || {};
   console.log(`${c.name || c.domain}`);
@@ -70,12 +73,13 @@ for (const c of clients) {
   if (problems.length) failed++;
   console.log("");
 }
+if (fresh) console.log("שימו לב: נתוני Search Console של הימים האחרונים בחודש עדיין זמניים ועשויים להשתנות מעט עד ה-4 בחודש.");
 console.log("גוררים את קובצי ה-month-….json לסטודיו, לאזור \"ייבוא אוטומטי\".");
 if (failed) process.exitCode = 1;
 
 // ---------- Search Console ----------
 async function fetchGsc(site) {
-  const q = (body) => post(`${GSC_BASE}/sites/${encodeURIComponent(site)}/searchAnalytics/query`, { type: "web", dataState: "final", ...body }, gscHint);
+  const q = (body) => post(`${GSC_BASE}/sites/${encodeURIComponent(site)}/searchAnalytics/query`, { type: "web", dataState: fresh ? "all" : "final", ...body }, gscHint);
   const range = (m) => ({ startDate: `${m}-01`, endDate: monthEnd(m) });
   const [tot, totPrev, days, queries, pages] = await Promise.all([
     q({ ...range(month) }), q({ ...range(prev) }),
@@ -91,6 +95,7 @@ async function fetchGsc(site) {
       daily: (days.rows || []).map((r) => ({ d: r.keys[0], c: r.clicks, i: r.impressions })).sort((a, b) => a.d.localeCompare(b.d)),
       queries: (queries.rows || []).map(row),
       pages: (pages.rows || []).map(row),
+      provisional: fresh || undefined,
       prev: tp ? { clicks: tp.clicks, impressions: tp.impressions, ctr: tp.ctr, position: tp.position } : null,
     },
   };
@@ -188,6 +193,17 @@ function parseArgs(a) {
 }
 function lastFullMonth() { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return ym(d); }
 function prevMonth(m) { const [y, mo] = m.split("-").map(Number); return ym(new Date(y, mo - 2, 1)); }
+function nextMonth(m) { const [y, mo] = m.split("-").map(Number); return ym(new Date(y, mo, 1)); }
+function readJson(envName, path, missing) {
+  const env = process.env[envName];
+  if (env) {
+    const t = env.trim();
+    try { return JSON.parse(t.startsWith("{") || t.startsWith("[") ? t : Buffer.from(t, "base64").toString("utf8")); }
+    catch { fail(`משתנה הסביבה ${envName} אינו JSON תקין.`); }
+  }
+  if (!existsSync(path)) fail(missing);
+  return JSON.parse(readFileSync(path, "utf8"));
+}
 function monthEnd(m) { const [y, mo] = m.split("-").map(Number); return `${m}-${String(new Date(y, mo, 0).getDate()).padStart(2, "0")}`; }
 function ym(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; }
 function bare(d) { return String(d).toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, ""); }
