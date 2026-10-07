@@ -58,6 +58,18 @@ button:hover:not(:disabled){filter:brightness(1.1)}
 .notice{margin-top:12px;padding:12px 14px;border:1px solid var(--down);border-radius:10px;background:var(--down-bg);font-size:14px}
 .notice code{display:inline-block;max-width:100%;overflow-wrap:anywhere;direction:ltr;font-family:var(--mono);background:var(--panel-2);padding:1px 6px;border-radius:4px;user-select:all}
 .num{font-family:var(--mono)}
+.health{margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:14px}
+.health summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;list-style:none}
+.health summary::-webkit-details-marker{display:none}
+.health .when{color:var(--muted);font-size:13px}
+.health .more{margin-inline-start:auto;color:var(--muted);font-size:12px}
+.health .text{white-space:pre-line;margin-top:10px;line-height:1.7}
+.health .older{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
+.health .older div{display:flex;gap:10px;align-items:baseline;padding:4px 0;font-size:13px}
+.health .older span.t{color:var(--muted);white-space:nowrap}
+.dot{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.dot::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.dot.ok{color:var(--up)}.dot.warn{color:#ffc35c}.dot.error{color:var(--down)}
 .statusbar button{margin-inline-start:auto;padding:5px 12px;font-size:13px}
 
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0 20px}
@@ -142,6 +154,7 @@ svg.spark{display:block}
       <button id="scan" type="button" class="ghost">עדכון עכשיו</button>
     </div>
     <div class="notice" id="notice" hidden></div>
+    <details class="health" id="health" hidden></details>
     <section class="kpis" id="kpis"></section>
     <div class="table-wrap">
       <table>
@@ -324,6 +337,27 @@ function renderStatus() {
   $('notice').hidden = !notice;
 }
 
+const STATUS_LABEL = { ok: 'הכול תקין', warn: 'יש מה לבדוק', error: 'יש בעיה' };
+const fmtStamp = (ts) => new Date(ts.replace(' ', 'T') + 'Z').toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+function renderHealth() {
+  const [last, ...older] = state.reports || [];
+  const el = $('health');
+  el.hidden = !last;
+  if (!last) return;
+  const open = el.open;
+  el.innerHTML = `
+    <summary>
+      <b>הבדיקה היומית של Claude</b>
+      <span class="dot ${esc(last.status)}">${STATUS_LABEL[last.status] || esc(last.status)}</span>
+      <span class="when">${fmtStamp(last.created_at)}</span>
+      <span class="more">לפרטים</span>
+    </summary>
+    <div class="text">${esc(last.summary)}</div>
+    ${older.length ? `<div class="older">${older.map((r) => `<div><span class="dot ${esc(r.status)}"></span><span class="t">${fmtStamp(r.created_at)}</span><span>${esc(r.summary.split('\n')[0])}</span></div>`).join('')}</div>` : ''}`;
+  el.open = open || last.status !== 'ok';
+}
+
 function render() {
   const rows = buildRows();
   const shown = rows
@@ -381,6 +415,7 @@ function render() {
   });
 
   renderStatus();
+  renderHealth();
   fillMonths();
 }
 
@@ -463,7 +498,7 @@ function printReport() {
 // ---------- טעינה ----------
 
 async function loadClients(selectId) {
-  state.clients = await call('GET', '/api/clients');
+  [state.clients, state.reports] = await Promise.all([call('GET', '/api/clients'), call('GET', '/api/reports')]);
   const sel = $('client');
   sel.innerHTML = state.clients.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
   sel.hidden = !state.clients.length;
@@ -598,6 +633,10 @@ function demoApi(method, path, body) {
   }
   let m;
   if (path === '/api/clients' && method === 'GET') return structuredClone(demo.clients);
+  if (path === '/api/reports') return [
+    { id: 2, created_at: new Date().toISOString().slice(0, 19).replace('T', ' '), status: 'ok', summary: 'כל 2 הלקוחות עודכנו היום, הנתונים מ-Search Console עדכניים.\nבולט: "מסעדת שף בצפון" עלה 3 מקומות השבוע.' },
+    { id: 1, created_at: new Date(Date.now() - 864e5).toISOString().slice(0, 19).replace('T', ' '), status: 'ok', summary: 'כל 2 הלקוחות עודכנו היום.' },
+  ];
   if (path === '/api/status') return { today: '', configured: true, serviceAccountEmail: 'demo@example.iam.gserviceaccount.com' };
   if ((m = path.match(/\/api\/clients\/(\d+)\/rankings/))) {
     const c = demo.clients.find((c) => c.id === Number(m[1]));

@@ -27,3 +27,11 @@ CREATE TABLE IF NOT EXISTS rankings (
   impressions INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (keyword_id, date)
 );
+
+-- דוח הבדיקה היומית ש-Claude כותב (מוצג בדשבורד)
+CREATE TABLE IF NOT EXISTS reports (
+  id INTEGER PRIMARY KEY,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  status TEXT NOT NULL CHECK (status IN ('ok', 'warn', 'error')),
+  summary TEXT NOT NULL
+);

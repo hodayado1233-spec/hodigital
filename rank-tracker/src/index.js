@@ -280,6 +280,10 @@ async function api(request, env, path) {
   if (path === '/api/status' && method === 'GET') return json(await status(env));
   if (path === '/api/scan' && method === 'POST') return json(await runBatch(env, { force: true }));
   if (path === '/api/clients' && method === 'GET') return json(await listClients(env));
+  if (path === '/api/reports' && method === 'GET') {
+    const { results } = await env.DB.prepare('SELECT id, created_at, status, summary FROM reports ORDER BY id DESC LIMIT 14').all();
+    return json(results);
+  }
 
   if (path === '/api/clients' && method === 'POST') {
     const { name, domain } = await body(request);
