@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>מעקב ביטויים | HODIGITAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0c0a10;
+  --panel:#15121c;
+  --panel-2:#1c1826;
+  --line:rgba(255,255,255,.09);
+  --text:#f5f4f7;
+  --muted:#a49eb2;
+  --violet:#7b61ff;
+  --uv:#c4b8ff;
+  --up:#2bff88;
+  --up-bg:rgba(43,255,136,.12);
+  --down:#ff5c72;
+  --down-bg:rgba(255,92,114,.13);
+  --flat:#a49eb2;
+  --sans:'IBM Plex Sans Hebrew',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono','Cascadia Mono',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5}
+a{color:var(--uv)}
+.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:20px 0 16px}
+.brand{font-weight:700;font-size:20px;letter-spacing:.02em}
+.brand span{color:var(--violet)}
+.updated{color:var(--muted);font-size:13px}
+.controls{margin-inline-start:auto;display:flex;flex-wrap:wrap;gap:8px}
+select,input,button{font:inherit;color:var(--text);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px}
+button{cursor:pointer;background:var(--violet);border-color:var(--violet);font-weight:600}
+button.ghost{background:var(--panel-2);border-color:var(--line)}
+button:hover{filter:brightness(1.1)}
+:focus-visible{outline:2px solid var(--uv);outline-offset:2px}
+
+.ticker{overflow:hidden;border-block:1px solid var(--line);background:var(--panel);white-space:nowrap;font-family:var(--mono);font-size:13px}
+.ticker-track{display:inline-flex;gap:32px;padding:9px 0;animation:tick 60s linear infinite}
+.ticker:hover .ticker-track{animation-play-state:paused}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(50%)}}
+@media (prefers-reduced-motion:reduce){.ticker-track{animation:none}}
+.ticker-item b{font-family:var(--sans);font-weight:500;color:var(--text)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .label{color:var(--muted);font-size:13px}
+.kpi .value{font-size:28px;font-weight:700;font-family:var(--mono)}
+.kpi.up .value{color:var(--up)}
+.kpi.down .value{color:var(--down)}
+
+.table-wrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:820px}
+th,td{padding:11px 14px;text-align:right;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:500;cursor:pointer;user-select:none;white-space:nowrap}
+th[aria-sort="ascending"]::after{content:" ▲"}
+th[aria-sort="descending"]::after{content:" ▼"}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--panel-2)}
+.kw{font-weight:600;min-width:150px}
+.pos{font-family:var(--mono);font-size:18px;font-weight:700}
+.pos.none{font-size:13px;color:var(--muted);font-weight:400}
+.chg{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-weight:600;padding:2px 9px;border-radius:999px;font-size:13px;white-space:nowrap}
+.chg.up{color:var(--up);background:var(--up-bg)}
+.chg.down{color:var(--down);background:var(--down-bg)}
+.chg.flat{color:var(--flat)}
+.lp{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left;font-size:13px}
+.best{font-family:var(--mono);color:var(--muted)}
+svg.spark{display:block}
+
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.empty code{font-family:var(--mono);color:var(--uv)}
+
+.export{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:20px 0 40px;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.export h2{font-size:16px;margin:0;margin-inline-end:auto}
+
+#report{display:none}
+
+@media print{
+  body{background:#fff;color:#0c0a10;font-size:12px}
+  .screen{display:none!important}
+  #report{display:block;padding:0}
+  #report h1{font-size:22px;margin:0 0 4px}
+  #report .sub{color:#5f5a69;margin-bottom:18px}
+  #report table{min-width:0;font-size:12px}
+  #report th{color:#5f5a69;cursor:default}
+  #report th,#report td{border-bottom:1px solid #e3e0e8;padding:7px 8px}
+  #report .chg.up{color:#00863f;background:#e3f9ec}
+  #report .chg.down{color:#c4142d;background:#fde8eb}
+  #report .chg.flat{color:#5f5a69}
+  #report .lp{max-width:220px}
+  #report .summary{display:flex;gap:24px;margin-bottom:16px}
+  #report .summary b{font-size:18px;display:block}
+  #report footer{margin-top:20px;color:#5f5a69;font-size:11px}
+}
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="wrap">
+    <header>
+      <div class="brand">HO<span>DIGITAL</span> · מעקב ביטויים</div>
+      <div class="updated" id="updated"></div>
+      <div class="controls">
+        <select id="client" aria-label="בחירת לקוח"></select>
+        <input id="search" type="search" placeholder="חיפוש ביטוי" aria-label="חיפוש ביטוי">
+      </div>
+    </header>
+  </div>
+  <div class="ticker" id="ticker" aria-hidden="true"><div class="ticker-track" id="ticker-track"></div></div>
+  <main class="wrap">
+    <section class="kpis" id="kpis"></section>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="keyword">ביטוי</th>
+            <th data-sort="position">מיקום</th>
+            <th data-sort="day">שינוי יומי</th>
+            <th data-sort="week">7 ימים</th>
+            <th data-sort="month">30 ימים</th>
+            <th>מגמה (30 יום)</th>
+            <th data-sort="best">שיא</th>
+            <th>דף נחיתה</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden></div>
+    </div>
+    <section class="export">
+      <h2>דוח חודשי ללקוח</h2>
+      <select id="month" aria-label="בחירת חודש"></select>
+      <button id="csv" type="button">ייצוא לאקסל (CSV)</button>
+      <button id="print" type="button" class="ghost">דוח להדפסה / PDF</button>
+    </section>
+  </main>
+</div>
+<div id="report"></div>
+
+<script>
+const DEMO = new URLSearchParams(location.search).has('demo');
+const $ = (id) => document.getElementById(id);
+const state = { config: null, client: null, data: null, sort: { key: 'position', dir: 1 }, query: '' };
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtDate = (d) => d ? d.split('-').reverse().join('/') : '';
+const monthName = (ym) => new Date(ym + '-01T12:00:00').toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+
+// שינוי במיקום: מספר חיובי = עלייה בדירוג (מספר המיקום ירד)
+function delta(prev, cur) {
+  if (prev === undefined) return { kind: 'flat', text: '—', value: 0 };
+  const p = prev?.position ?? null, c = cur?.position ?? null;
+  if (p === null && c === null) return { kind: 'flat', text: '—', value: 0 };
+  if (p === null) return { kind: 'up', text: '▲ חדש', value: 1000 };
+  if (c === null) return { kind: 'down', text: '▼ יצא', value: -1000 };
+  const v = p - c;
+  if (v > 0) return { kind: 'up', text: '▲ ' + v, value: v };
+  if (v < 0) return { kind: 'down', text: '▼ ' + -v, value: v };
+  return { kind: 'flat', text: '0', value: 0 };
+}
+
+// הרשומה האחרונה שתאריכה לפני או בדיוק ב-date
+function entryAt(history, date) {
+  let found;
+  for (const e of history) { if (e.date <= date) found = e; else break; }
+  return found;
+}
+
+function shiftDate(date, days) {
+  const d = new Date(date + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function sparkline(history, maxDepth) {
+  const pts = history.slice(-30);
+  const w = 110, h = 30, pad = 3;
+  if (pts.length < 2) return '<span class="best">—</span>';
+  const x = (i) => w - pad - (i * (w - 2 * pad)) / (pts.length - 1); // RTL: היום בצד שמאל
+  const y = (p) => pad + ((Math.min(p, maxDepth) - 1) * (h - 2 * pad)) / (maxDepth - 1);
+  let d = '', open = false;
+  pts.forEach((e, i) => {
+    if (e.position === null) { open = false; return; }
+    d += (open ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(e.position).toFixed(1);
+    open = true;
+  });
+  const dd = delta(pts[0], pts[pts.length - 1]);
+  const color = dd.kind === 'up' ? 'var(--up)' : dd.kind === 'down' ? 'var(--down)' : 'var(--flat)';
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="מגמת מיקום"><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+const chip = (d) => `<span class="chg ${d.kind}">${d.text}</span>`;
+
+function buildRows() {
+  const client = state.client, hist = state.data.keywords || {};
+  return client.keywords.map((keyword) => {
+    const h = hist[keyword] || [];
+    const cur = h[h.length - 1];
+    const today = cur?.date;
+    const ranked = h.filter((e) => e.position !== null);
+    return {
+      keyword, history: h, cur,
+      position: cur?.position ?? null,
+      url: cur?.url || ranked[ranked.length - 1]?.url || null,
+      day: delta(h[h.length - 2], cur),
+      week: today ? delta(entryAt(h, shiftDate(today, -7)), cur) : delta(undefined),
+      month: today ? delta(entryAt(h, shiftDate(today, -30)), cur) : delta(undefined),
+      best: ranked.length ? Math.min(...ranked.map((e) => e.position)) : null,
+    };
+  });
+}
+
+function sortValue(r, key) {
+  switch (key) {
+    case 'keyword': return r.keyword;
+    case 'position': case 'best': return r[key] ?? 9999;
+    default: return -r[key].value;
+  }
+}
+
+function render() {
+  const maxDepth = state.config.settings?.maxDepth || 50;
+  const rows = buildRows();
+  const shown = rows
+    .filter((r) => r.keyword.includes(state.query))
+    .sort((a, b) => {
+      const va = sortValue(a, state.sort.key), vb = sortValue(b, state.sort.key);
+      return (typeof va === 'string' ? va.localeCompare(vb, 'he') : va - vb) * state.sort.dir;
+    });
+
+  $('updated').textContent = state.data.updated ? 'עודכן: ' + fmtDate(state.data.updated) : '';
+
+  const ranked = rows.filter((r) => r.position !== null);
+  const avg = ranked.length ? (ranked.reduce((s, r) => s + r.position, 0) / ranked.length).toFixed(1) : '—';
+  const up = rows.filter((r) => r.day.kind === 'up').length;
+  const down = rows.filter((r) => r.day.kind === 'down').length;
+  $('kpis').innerHTML = [
+    ['ביטויים במעקב', rows.length, ''],
+    ['מיקום ממוצע', avg, ''],
+    ['בטופ 3', ranked.filter((r) => r.position <= 3).length, ''],
+    ['בטופ 10', ranked.filter((r) => r.position <= 10).length, ''],
+    ['עלו היום', up, 'up'],
+    ['ירדו היום', down, 'down'],
+  ].map(([l, v, c]) => `<div class="kpi ${c}"><div class="label">${l}</div><div class="value">${v}</div></div>`).join('');
+
+  const items = rows.filter((r) => r.cur).map((r) =>
+    `<span class="ticker-item"><b>${esc(r.keyword)}</b> ${r.position ?? '—'} ${chip(r.day)}</span>`).join('');
+  $('ticker-track').innerHTML = items + items;
+  $('ticker').hidden = !items;
+
+  $('rows').innerHTML = shown.map((r) => `
+    <tr>
+      <td class="kw">${esc(r.keyword)}</td>
+      <td>${r.position !== null ? `<span class="pos">${r.position}</span>` : `<span class="pos none">${r.cur ? 'לא בטופ ' + maxDepth : 'טרם נסרק'}</span>`}</td>
+      <td>${chip(r.day)}</td>
+      <td>${chip(r.week)}</td>
+      <td>${chip(r.month)}</td>
+      <td>${sparkline(r.history, maxDepth)}</td>
+      <td class="best">${r.best ?? '—'}</td>
+      <td class="lp">${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${esc(r.url)}">${esc(decodeURI(r.url.replace(/^https?:\/\/(www\.)?/, '')))}</a>` : '—'}</td>
+    </tr>`).join('');
+
+  const empty = $('empty');
+  empty.hidden = rows.some((r) => r.cur);
+  empty.innerHTML = 'עדיין אין נתונים ללקוח הזה. הסריקה הראשונה תרוץ אוטומטית מחר בבוקר, או מיד דרך <code>Actions → Rank tracker → Run workflow</code>.';
+
+  document.querySelectorAll('th[data-sort]').forEach((th) => {
+    th.setAttribute('aria-sort', th.dataset.sort === state.sort.key ? (state.sort.dir === 1 ? 'ascending' : 'descending') : 'none');
+  });
+
+  fillMonths();
+}
+
+function fillMonths() {
+  const months = new Set();
+  Object.values(state.data.keywords || {}).forEach((h) => h.forEach((e) => months.add(e.date.slice(0, 7))));
+  const list = [...months].sort().reverse();
+  const sel = $('month'), prev = sel.value;
+  sel.innerHTML = list.map((m) => `<option value="${m}">${monthName(m)}</option>`).join('');
+  if (list.includes(prev)) sel.value = prev;
+  $('csv').disabled = $('print').disabled = !list.length;
+}
+
+// סיכום חודשי: מיקום בתחילת החודש (הסריקה האחרונה לפניו, או הראשונה בו) מול הסריקה האחרונה בחודש
+function monthReport(ym) {
+  const start = ym + '-01', end = ym + '-31';
+  return state.client.keywords.map((keyword) => {
+    const h = state.data.keywords?.[keyword] || [];
+    const inMonth = h.filter((e) => e.date >= start && e.date <= end);
+    const first = entryAt(h, shiftDate(start, -1)) || inMonth[0];
+    const last = inMonth[inMonth.length - 1];
+    const ranked = inMonth.filter((e) => e.position !== null);
+    const lastUrl = [...inMonth].reverse().find((e) => e.url)?.url || null;
+    return {
+      keyword,
+      start: first?.position ?? null,
+      end: last?.position ?? null,
+      change: last ? delta(first, last) : delta(undefined),
+      best: ranked.length ? Math.min(...ranked.map((e) => e.position)) : null,
+      url: lastUrl,
+      scanned: !!last,
+    };
+  });
+}
+
+function exportCsv() {
+  const ym = $('month').value, maxDepth = state.config.settings?.maxDepth || 50;
+  const out = (p) => p ?? `מחוץ לטופ ${maxDepth}`;
+  const lines = [['ביטוי', 'מיקום בתחילת החודש', 'מיקום בסוף החודש', 'שינוי', 'המיקום הטוב ביותר בחודש', 'דף נחיתה']];
+  monthReport(ym).filter((r) => r.scanned).forEach((r) => {
+    const change = r.change.kind === 'flat' ? '0' : r.change.text.replace('▲ ', '+').replace('▼ ', '-');
+    lines.push([r.keyword, out(r.start), out(r.end), change, r.best ?? '—', r.url ? decodeURI(r.url) : '—']);
+  });
+  const csv = '﻿' + lines.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `${state.client.id}-rankings-${ym}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function printReport() {
+  const ym = $('month').value, maxDepth = state.config.settings?.maxDepth || 50;
+  const rows = monthReport(ym).filter((r) => r.scanned);
+  const ups = rows.filter((r) => r.change.kind === 'up').length;
+  const top10 = rows.filter((r) => r.end !== null && r.end <= 10).length;
+  const out = (p) => p ?? `<span style="color:#5f5a69">מחוץ לטופ ${maxDepth}</span>`;
+  $('report').innerHTML = `
+    <h1>דוח מיקומים בגוגל · ${esc(state.client.name)}</h1>
+    <div class="sub">${monthName(ym)} · ${esc(state.client.domain)}</div>
+    <div class="summary">
+      <div><b>${rows.length}</b>ביטויים במעקב</div>
+      <div><b>${ups}</b>ביטויים שהשתפרו</div>
+      <div><b>${top10}</b>ביטויים בעמוד הראשון</div>
+    </div>
+    <table>
+      <thead><tr><th>ביטוי</th><th>תחילת החודש</th><th>סוף החודש</th><th>שינוי</th><th>שיא החודש</th><th>דף נחיתה</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr><td class="kw">${esc(r.keyword)}</td><td>${out(r.start)}</td><td><b>${out(r.end)}</b></td><td>${chip(r.change)}</td><td>${r.best ?? '—'}</td><td class="lp">${r.url ? esc(decodeURI(r.url.replace(/^https?:\/\/(www\.)?/, ''))) : '—'}</td></tr>`).join('')}</tbody>
+    </table>
+    <footer>הופק על ידי HODIGITAL · הודיה ארנטרוי · 054-725-3007</footer>`;
+  window.print();
+}
+
+async function loadClient(id) {
+  state.client = state.config.clients.find((c) => c.id === id);
+  if (DEMO) state.data = demoData(state.client);
+  else {
+    try {
+      const res = await fetch(`data/${encodeURIComponent(id)}.json`, { cache: 'no-store' });
+      state.data = res.ok ? await res.json() : { keywords: {} };
+    } catch { state.data = { keywords: {} }; }
+  }
+  try { localStorage.setItem('rt-client', id); } catch {}
+  render();
+}
+
+function demoData(client) {
+  const keywords = {}, days = 75;
+  client.keywords.forEach((k, i) => {
+    let p = 5 + ((i * 13) % 40);
+    keywords[k] = Array.from({ length: days }, (_, d) => {
+      p = Math.max(1, Math.min(60, p + Math.round((Math.random() - 0.55) * 4)));
+      const date = shiftDate(new Date().toISOString().slice(0, 10), d - days + 1);
+      return { date, position: p > 50 ? null : p, url: p > 50 ? null : `https://${client.domain}/${i % 2 ? 'services/' : ''}` };
+    });
+  });
+  return { updated: new Date().toISOString().slice(0, 10), keywords };
+}
+
+async function init() {
+  try {
+    const res = await fetch('clients.json', { cache: 'no-store' });
+    state.config = await res.json();
+  } catch {
+    $('kpis').innerHTML = '<div class="empty">לא הצלחתי לטעון את clients.json. הדף צריך לרוץ מהאתר (GitHub Pages) ולא מקובץ מקומי.</div>';
+    return;
+  }
+  const sel = $('client');
+  sel.innerHTML = state.config.clients.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+  let saved; try { saved = localStorage.getItem('rt-client'); } catch {}
+  if (saved && state.config.clients.some((c) => c.id === saved)) sel.value = saved;
+  sel.addEventListener('change', () => loadClient(sel.value));
+  $('search').addEventListener('input', (e) => { state.query = e.target.value.trim(); render(); });
+  document.querySelectorAll('th[data-sort]').forEach((th) => th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    state.sort = { key, dir: state.sort.key === key ? -state.sort.dir : 1 };
+    render();
+  }));
+  $('csv').addEventListener('click', exportCsv);
+  $('print').addEventListener('click', printReport);
+  loadClient(sel.value);
+}
+
+init();
+</script>
+</body>
+</html>
