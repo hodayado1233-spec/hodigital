@@ -27,6 +27,7 @@
   --mono:ui-monospace,'SF Mono','Cascadia Mono',Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--ink);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5}
 a{color:var(--uv)}
 .wrap{max-width:1200px;margin:0 auto;padding:0 16px}
@@ -36,10 +37,13 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:20px
 .brand span{color:var(--violet)}
 .updated{color:var(--muted);font-size:13px}
 .controls{margin-inline-start:auto;display:flex;flex-wrap:wrap;gap:8px}
-select,input,button{font:inherit;color:var(--text);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px}
+select,input,button,textarea{font:inherit;color:var(--text);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px}
+textarea{width:100%;min-height:110px;resize:vertical}
 button{cursor:pointer;background:var(--violet);border-color:var(--violet);font-weight:600}
 button.ghost{background:var(--panel-2);border-color:var(--line)}
-button:hover{filter:brightness(1.1)}
+button.danger{background:transparent;border-color:var(--down);color:var(--down)}
+button:disabled{opacity:.5;cursor:default}
+button:hover:not(:disabled){filter:brightness(1.1)}
 :focus-visible{outline:2px solid var(--uv);outline-offset:2px}
 
 .ticker{overflow:hidden;border-block:1px solid var(--line);background:var(--panel);white-space:nowrap;font-family:var(--mono);font-size:13px}
@@ -49,7 +53,11 @@ button:hover{filter:brightness(1.1)}
 @media (prefers-reduced-motion:reduce){.ticker-track{animation:none}}
 .ticker-item b{font-family:var(--sans);font-weight:500;color:var(--text)}
 
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0}
+.statusbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:16px;color:var(--muted);font-size:13px}
+.statusbar .warn{color:var(--down)}
+.statusbar button{margin-inline-start:auto;padding:5px 12px;font-size:13px}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0 20px}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
 .kpi .label{color:var(--muted);font-size:13px}
 .kpi .value{font-size:28px;font-weight:700;font-family:var(--mono)}
@@ -57,29 +65,40 @@ button:hover{filter:brightness(1.1)}
 .kpi.down .value{color:var(--down)}
 
 .table-wrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:820px}
+table{width:100%;border-collapse:collapse;min-width:860px}
 th,td{padding:11px 14px;text-align:right;border-bottom:1px solid var(--line);vertical-align:middle}
-th{font-size:12px;color:var(--muted);font-weight:500;cursor:pointer;user-select:none;white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:500;user-select:none;white-space:nowrap}
+th[data-sort]{cursor:pointer}
 th[aria-sort="ascending"]::after{content:" ▲"}
 th[aria-sort="descending"]::after{content:" ▼"}
 tr:last-child td{border-bottom:0}
 tbody tr:hover{background:var(--panel-2)}
 .kw{font-weight:600;min-width:150px}
 .pos{font-family:var(--mono);font-size:18px;font-weight:700}
-.pos.none{font-size:13px;color:var(--muted);font-weight:400}
+.pos.none{font-family:var(--sans);font-size:13px;color:var(--muted);font-weight:400}
 .chg{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-weight:600;padding:2px 9px;border-radius:999px;font-size:13px;white-space:nowrap}
 .chg.up{color:var(--up);background:var(--up-bg)}
 .chg.down{color:var(--down);background:var(--down-bg)}
 .chg.flat{color:var(--flat)}
 .lp{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left;font-size:13px}
 .best{font-family:var(--mono);color:var(--muted)}
+.del{background:none;border:0;color:var(--muted);padding:2px 6px;font-size:16px;line-height:1}
+.del:hover{color:var(--down)}
 svg.spark{display:block}
 
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
-.empty code{font-family:var(--mono);color:var(--uv)}
 
-.export{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:20px 0 40px;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
-.export h2{font-size:16px;margin:0;margin-inline-end:auto}
+.panel{margin:20px 0;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.panel h2{font-size:16px;margin:0 0 12px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.row h2{margin:0;margin-inline-end:auto}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px}
+.field span{font-size:12px;color:var(--muted)}
+.hint{font-size:12px;color:var(--muted);margin:6px 0 0}
+.msg{font-size:13px;color:var(--up);min-height:1.2em}
+.msg.err{color:var(--down)}
+.domain{direction:ltr}
 
 #report{display:none}
 
@@ -90,7 +109,7 @@ svg.spark{display:block}
   #report h1{font-size:22px;margin:0 0 4px}
   #report .sub{color:#5f5a69;margin-bottom:18px}
   #report table{min-width:0;font-size:12px}
-  #report th{color:#5f5a69;cursor:default}
+  #report th{color:#5f5a69}
   #report th,#report td{border-bottom:1px solid #e3e0e8;padding:7px 8px}
   #report .chg.up{color:#00863f;background:#e3f9ec}
   #report .chg.down{color:#c4142d;background:#fde8eb}
@@ -116,6 +135,10 @@ svg.spark{display:block}
   </div>
   <div class="ticker" id="ticker" aria-hidden="true"><div class="ticker-track" id="ticker-track"></div></div>
   <main class="wrap">
+    <div class="statusbar">
+      <span id="status"></span>
+      <button id="scan" type="button" class="ghost">סריקה עכשיו</button>
+    </div>
     <section class="kpis" id="kpis"></section>
     <div class="table-wrap">
       <table>
@@ -129,17 +152,46 @@ svg.spark{display:block}
             <th>מגמה (30 יום)</th>
             <th data-sort="best">שיא</th>
             <th>דף נחיתה</th>
+            <th><span hidden>מחיקה</span></th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="empty" id="empty" hidden></div>
     </div>
-    <section class="export">
+
+    <section class="panel row" id="export-panel">
       <h2>דוח חודשי ללקוח</h2>
       <select id="month" aria-label="בחירת חודש"></select>
       <button id="csv" type="button">ייצוא לאקסל (CSV)</button>
       <button id="print" type="button" class="ghost">דוח להדפסה / PDF</button>
+    </section>
+
+    <section class="panel grid2">
+      <form id="kw-form">
+        <h2>הוספת ביטויים ל<span id="kw-client-name">לקוח</span></h2>
+        <textarea id="kw-input" placeholder="ביטוי אחד בכל שורה" aria-label="ביטויים להוספה"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button type="submit">הוספה</button>
+          <span class="msg" id="kw-msg"></span>
+        </div>
+        <p class="hint">ביטוי חדש ייסרק בריצה הקרובה (תוך 10 דקות), או מיד בלחיצה על "סריקה עכשיו".</p>
+      </form>
+      <form id="client-form">
+        <h2 id="client-form-title">לקוח חדש</h2>
+        <div class="row">
+          <label class="field"><span>שם הלקוח</span><input id="c-name" required></label>
+          <label class="field"><span>דומיין</span><input id="c-domain" class="domain" placeholder="example.co.il" required></label>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button type="submit" id="c-save">יצירת לקוח</button>
+          <button type="button" class="ghost" id="c-edit-current">עריכת הלקוח הנוכחי</button>
+          <button type="button" class="ghost" id="c-cancel" hidden>ביטול</button>
+          <button type="button" class="danger" id="c-delete" hidden>מחיקת לקוח</button>
+          <span class="msg" id="c-msg"></span>
+        </div>
+        <p class="hint">דומיין בלי https ובלי www. תתי-דומיינים נספרים אוטומטית. אפשר גם דומיין עם נתיב, למשל user.github.io/site.</p>
+      </form>
     </section>
   </main>
 </div>
@@ -148,11 +200,21 @@ svg.spark{display:block}
 <script>
 const DEMO = new URLSearchParams(location.search).has('demo');
 const $ = (id) => document.getElementById(id);
-const state = { config: null, client: null, data: null, sort: { key: 'position', dir: 1 }, query: '' };
+const state = { clients: [], client: null, data: { keywords: {} }, status: null, sort: { key: 'position', dir: 1 }, query: '', editing: false };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmtDate = (d) => d ? d.split('-').reverse().join('/') : '';
 const monthName = (ym) => new Date(ym + '-01T12:00:00').toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+const maxDepth = () => state.status?.maxDepth || 50;
+const prettyUrl = (u) => { try { return decodeURI(u.replace(/^https?:\/\/(www\.)?/, '')); } catch { return u; } };
+
+async function call(method, path, body) {
+  if (DEMO) return demoApi(method, path, body);
+  const res = await fetch(path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'שגיאה ' + res.status);
+  return data;
+}
 
 // שינוי במיקום: מספר חיובי = עלייה בדירוג (מספר המיקום ירד)
 function delta(prev, cur) {
@@ -180,12 +242,12 @@ function shiftDate(date, days) {
   return d.toISOString().slice(0, 10);
 }
 
-function sparkline(history, maxDepth) {
-  const pts = history.slice(-30);
+function sparkline(history) {
+  const pts = history.slice(-30), depth = maxDepth();
   const w = 110, h = 30, pad = 3;
   if (pts.length < 2) return '<span class="best">—</span>';
   const x = (i) => w - pad - (i * (w - 2 * pad)) / (pts.length - 1); // RTL: היום בצד שמאל
-  const y = (p) => pad + ((Math.min(p, maxDepth) - 1) * (h - 2 * pad)) / (maxDepth - 1);
+  const y = (p) => pad + ((Math.min(p, depth) - 1) * (h - 2 * pad)) / (depth - 1);
   let d = '', open = false;
   pts.forEach((e, i) => {
     if (e.position === null) { open = false; return; }
@@ -200,14 +262,15 @@ function sparkline(history, maxDepth) {
 const chip = (d) => `<span class="chg ${d.kind}">${d.text}</span>`;
 
 function buildRows() {
-  const client = state.client, hist = state.data.keywords || {};
-  return client.keywords.map((keyword) => {
-    const h = hist[keyword] || [];
+  if (!state.client) return [];
+  const hist = state.data.keywords || {};
+  return state.client.keywords.map(({ id, keyword }) => {
+    const h = hist[id] || [];
     const cur = h[h.length - 1];
     const today = cur?.date;
     const ranked = h.filter((e) => e.position !== null);
     return {
-      keyword, history: h, cur,
+      id, keyword, history: h, cur,
       position: cur?.position ?? null,
       url: cur?.url || ranked[ranked.length - 1]?.url || null,
       day: delta(h[h.length - 2], cur),
@@ -226,9 +289,19 @@ function sortValue(r, key) {
   }
 }
 
+function renderStatus() {
+  const s = state.status;
+  if (!s) { $('status').textContent = ''; return; }
+  const parts = [`נסרקו היום ${s.done} מתוך ${s.total} ביטויים`];
+  if (s.failed) parts.push(`<span class="warn">${s.failed} נכשלו היום</span>`);
+  if (!s.serperConfigured) parts.push('<span class="warn">חסר מפתח Serper, הסריקה לא פועלת</span>');
+  $('status').innerHTML = parts.join(' · ');
+  $('scan').disabled = !s.serperConfigured || s.done >= s.total;
+}
+
 function render() {
-  const maxDepth = state.config.settings?.maxDepth || 50;
   const rows = buildRows();
+  const depth = maxDepth();
   const shown = rows
     .filter((r) => r.keyword.includes(state.query))
     .sort((a, b) => {
@@ -237,18 +310,19 @@ function render() {
     });
 
   $('updated').textContent = state.data.updated ? 'עודכן: ' + fmtDate(state.data.updated) : '';
+  $('kw-client-name').textContent = state.client ? state.client.name : 'לקוח';
+  $('kw-form').querySelector('button').disabled = !state.client;
+  $('c-edit-current').hidden = !state.client || state.editing;
 
   const ranked = rows.filter((r) => r.position !== null);
   const avg = ranked.length ? (ranked.reduce((s, r) => s + r.position, 0) / ranked.length).toFixed(1) : '—';
-  const up = rows.filter((r) => r.day.kind === 'up').length;
-  const down = rows.filter((r) => r.day.kind === 'down').length;
   $('kpis').innerHTML = [
     ['ביטויים במעקב', rows.length, ''],
     ['מיקום ממוצע', avg, ''],
     ['בטופ 3', ranked.filter((r) => r.position <= 3).length, ''],
     ['בטופ 10', ranked.filter((r) => r.position <= 10).length, ''],
-    ['עלו היום', up, 'up'],
-    ['ירדו היום', down, 'down'],
+    ['עלו היום', rows.filter((r) => r.day.kind === 'up').length, 'up'],
+    ['ירדו היום', rows.filter((r) => r.day.kind === 'down').length, 'down'],
   ].map(([l, v, c]) => `<div class="kpi ${c}"><div class="label">${l}</div><div class="value">${v}</div></div>`).join('');
 
   const items = rows.filter((r) => r.cur).map((r) =>
@@ -259,23 +333,27 @@ function render() {
   $('rows').innerHTML = shown.map((r) => `
     <tr>
       <td class="kw">${esc(r.keyword)}</td>
-      <td>${r.position !== null ? `<span class="pos">${r.position}</span>` : `<span class="pos none">${r.cur ? 'לא בטופ ' + maxDepth : 'טרם נסרק'}</span>`}</td>
+      <td>${r.position !== null ? `<span class="pos">${r.position}</span>` : `<span class="pos none">${r.cur ? 'לא בטופ ' + depth : 'טרם נסרק'}</span>`}</td>
       <td>${chip(r.day)}</td>
       <td>${chip(r.week)}</td>
       <td>${chip(r.month)}</td>
-      <td>${sparkline(r.history, maxDepth)}</td>
+      <td>${sparkline(r.history)}</td>
       <td class="best">${r.best ?? '—'}</td>
-      <td class="lp">${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${esc(r.url)}">${esc(decodeURI(r.url.replace(/^https?:\/\/(www\.)?/, '')))}</a>` : '—'}</td>
+      <td class="lp">${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${esc(r.url)}">${esc(prettyUrl(r.url))}</a>` : '—'}</td>
+      <td><button class="del" type="button" data-del="${r.id}" title="הסרת הביטוי" aria-label="הסרת ${esc(r.keyword)}">×</button></td>
     </tr>`).join('');
 
   const empty = $('empty');
-  empty.hidden = rows.some((r) => r.cur);
-  empty.innerHTML = 'עדיין אין נתונים ללקוח הזה. הסריקה הראשונה תרוץ אוטומטית מחר בבוקר, או מיד דרך <code>Actions → Rank tracker → Run workflow</code>.';
+  empty.hidden = rows.length > 0;
+  empty.textContent = !state.clients.length
+    ? 'עוד אין לקוחות. מוסיפים לקוח ראשון בטופס "לקוח חדש" למטה.'
+    : 'אין עדיין ביטויים ללקוח הזה. מוסיפים אותם בטופס למטה.';
 
   document.querySelectorAll('th[data-sort]').forEach((th) => {
     th.setAttribute('aria-sort', th.dataset.sort === state.sort.key ? (state.sort.dir === 1 ? 'ascending' : 'descending') : 'none');
   });
 
+  renderStatus();
   fillMonths();
 }
 
@@ -292,47 +370,46 @@ function fillMonths() {
 // סיכום חודשי: מיקום בתחילת החודש (הסריקה האחרונה לפניו, או הראשונה בו) מול הסריקה האחרונה בחודש
 function monthReport(ym) {
   const start = ym + '-01', end = ym + '-31';
-  return state.client.keywords.map((keyword) => {
-    const h = state.data.keywords?.[keyword] || [];
+  return state.client.keywords.map(({ id, keyword }) => {
+    const h = state.data.keywords?.[id] || [];
     const inMonth = h.filter((e) => e.date >= start && e.date <= end);
     const first = entryAt(h, shiftDate(start, -1)) || inMonth[0];
     const last = inMonth[inMonth.length - 1];
     const ranked = inMonth.filter((e) => e.position !== null);
-    const lastUrl = [...inMonth].reverse().find((e) => e.url)?.url || null;
     return {
       keyword,
       start: first?.position ?? null,
       end: last?.position ?? null,
       change: last ? delta(first, last) : delta(undefined),
       best: ranked.length ? Math.min(...ranked.map((e) => e.position)) : null,
-      url: lastUrl,
+      url: [...inMonth].reverse().find((e) => e.url)?.url || null,
       scanned: !!last,
     };
   });
 }
 
 function exportCsv() {
-  const ym = $('month').value, maxDepth = state.config.settings?.maxDepth || 50;
-  const out = (p) => p ?? `מחוץ לטופ ${maxDepth}`;
+  const ym = $('month').value, depth = maxDepth();
+  const out = (p) => p ?? `מחוץ לטופ ${depth}`;
   const lines = [['ביטוי', 'מיקום בתחילת החודש', 'מיקום בסוף החודש', 'שינוי', 'המיקום הטוב ביותר בחודש', 'דף נחיתה']];
   monthReport(ym).filter((r) => r.scanned).forEach((r) => {
     const change = r.change.kind === 'flat' ? '0' : r.change.text.replace('▲ ', '+').replace('▼ ', '-');
-    lines.push([r.keyword, out(r.start), out(r.end), change, r.best ?? '—', r.url ? decodeURI(r.url) : '—']);
+    lines.push([r.keyword, out(r.start), out(r.end), change, r.best ?? '—', r.url ? prettyUrl(r.url) : '—']);
   });
   const csv = '﻿' + lines.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = `${state.client.id}-rankings-${ym}.csv`;
+  a.download = `דוח מיקומים - ${state.client.name} - ${ym}.csv`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
 
 function printReport() {
-  const ym = $('month').value, maxDepth = state.config.settings?.maxDepth || 50;
+  const ym = $('month').value, depth = maxDepth();
   const rows = monthReport(ym).filter((r) => r.scanned);
   const ups = rows.filter((r) => r.change.kind === 'up').length;
   const top10 = rows.filter((r) => r.end !== null && r.end <= 10).length;
-  const out = (p) => p ?? `<span style="color:#5f5a69">מחוץ לטופ ${maxDepth}</span>`;
+  const out = (p) => p ?? `<span style="color:#5f5a69">מחוץ לטופ ${depth}</span>`;
   $('report').innerHTML = `
     <h1>דוח מיקומים בגוגל · ${esc(state.client.name)}</h1>
     <div class="sub">${monthName(ym)} · ${esc(state.client.domain)}</div>
@@ -343,51 +420,58 @@ function printReport() {
     </div>
     <table>
       <thead><tr><th>ביטוי</th><th>תחילת החודש</th><th>סוף החודש</th><th>שינוי</th><th>שיא החודש</th><th>דף נחיתה</th></tr></thead>
-      <tbody>${rows.map((r) => `<tr><td class="kw">${esc(r.keyword)}</td><td>${out(r.start)}</td><td><b>${out(r.end)}</b></td><td>${chip(r.change)}</td><td>${r.best ?? '—'}</td><td class="lp">${r.url ? esc(decodeURI(r.url.replace(/^https?:\/\/(www\.)?/, ''))) : '—'}</td></tr>`).join('')}</tbody>
+      <tbody>${rows.map((r) => `<tr><td class="kw">${esc(r.keyword)}</td><td>${out(r.start)}</td><td><b>${out(r.end)}</b></td><td>${chip(r.change)}</td><td>${r.best ?? '—'}</td><td class="lp">${r.url ? esc(prettyUrl(r.url)) : '—'}</td></tr>`).join('')}</tbody>
     </table>
     <footer>הופק על ידי HODIGITAL · הודיה ארנטרוי · 054-725-3007</footer>`;
+  const prevTitle = document.title;
+  document.title = `דוח מיקומים - ${state.client.name} - ${monthName(ym)}`;
   window.print();
+  document.title = prevTitle;
+}
+
+// ---------- טעינה ----------
+
+async function loadClients(selectId) {
+  state.clients = await call('GET', '/api/clients');
+  const sel = $('client');
+  sel.innerHTML = state.clients.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  sel.hidden = !state.clients.length;
+  let saved = selectId;
+  if (saved == null) { try { saved = localStorage.getItem('rt-client'); } catch {} }
+  if (saved != null && state.clients.some((c) => String(c.id) === String(saved))) sel.value = String(saved);
+  await loadClient(sel.value);
 }
 
 async function loadClient(id) {
-  state.client = state.config.clients.find((c) => c.id === id);
-  if (DEMO) state.data = demoData(state.client);
-  else {
-    try {
-      const res = await fetch(`data/${encodeURIComponent(id)}.json`, { cache: 'no-store' });
-      state.data = res.ok ? await res.json() : { keywords: {} };
-    } catch { state.data = { keywords: {} }; }
-  }
-  try { localStorage.setItem('rt-client', id); } catch {}
+  state.client = state.clients.find((c) => String(c.id) === String(id)) || null;
+  const [data, status] = await Promise.all([
+    state.client ? call('GET', `/api/clients/${state.client.id}/rankings`) : { keywords: {} },
+    call('GET', '/api/status'),
+  ]);
+  state.data = data;
+  state.status = status;
+  if (state.client) { try { localStorage.setItem('rt-client', state.client.id); } catch {} }
   render();
 }
 
-function demoData(client) {
-  const keywords = {}, days = 75;
-  client.keywords.forEach((k, i) => {
-    let p = 5 + ((i * 13) % 40);
-    keywords[k] = Array.from({ length: days }, (_, d) => {
-      p = Math.max(1, Math.min(60, p + Math.round((Math.random() - 0.55) * 4)));
-      const date = shiftDate(new Date().toISOString().slice(0, 10), d - days + 1);
-      return { date, position: p > 50 ? null : p, url: p > 50 ? null : `https://${client.domain}/${i % 2 ? 'services/' : ''}` };
-    });
-  });
-  return { updated: new Date().toISOString().slice(0, 10), keywords };
+function flash(el, text, isErr) {
+  el.textContent = text;
+  el.classList.toggle('err', !!isErr);
+  if (!isErr) setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 3000);
 }
 
-async function init() {
-  try {
-    const res = await fetch('clients.json', { cache: 'no-store' });
-    state.config = await res.json();
-  } catch {
-    $('kpis').innerHTML = '<div class="empty">לא הצלחתי לטעון את clients.json. הדף צריך לרוץ מהאתר (GitHub Pages) ולא מקובץ מקומי.</div>';
-    return;
-  }
-  const sel = $('client');
-  sel.innerHTML = state.config.clients.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
-  let saved; try { saved = localStorage.getItem('rt-client'); } catch {}
-  if (saved && state.config.clients.some((c) => c.id === saved)) sel.value = saved;
-  sel.addEventListener('change', () => loadClient(sel.value));
+function setEditing(on) {
+  state.editing = on;
+  $('client-form-title').textContent = on ? 'עריכת לקוח' : 'לקוח חדש';
+  $('c-save').textContent = on ? 'שמירה' : 'יצירת לקוח';
+  $('c-cancel').hidden = $('c-delete').hidden = !on;
+  $('c-name').value = on ? state.client.name : '';
+  $('c-domain').value = on ? state.client.domain : '';
+  render();
+}
+
+function init() {
+  $('client').addEventListener('change', (e) => { setEditing(false); loadClient(e.target.value); });
   $('search').addEventListener('input', (e) => { state.query = e.target.value.trim(); render(); });
   document.querySelectorAll('th[data-sort]').forEach((th) => th.addEventListener('click', () => {
     const key = th.dataset.sort;
@@ -396,7 +480,99 @@ async function init() {
   }));
   $('csv').addEventListener('click', exportCsv);
   $('print').addEventListener('click', printReport);
-  loadClient(sel.value);
+
+  $('scan').addEventListener('click', async () => {
+    const btn = $('scan');
+    btn.disabled = true; btn.textContent = 'סורקת...';
+    try {
+      const r = await call('POST', '/api/scan');
+      if (r.error) alert(r.error);
+      await loadClient(state.client?.id);
+    } catch (err) { alert(err.message); }
+    btn.textContent = 'סריקה עכשיו';
+    renderStatus();
+  });
+
+  $('rows').addEventListener('click', async (e) => {
+    const id = e.target.closest('[data-del]')?.dataset.del;
+    if (!id) return;
+    const kw = state.client.keywords.find((k) => String(k.id) === id);
+    if (!confirm(`להסיר את "${kw.keyword}"? כל ההיסטוריה של הביטוי תימחק.`)) return;
+    await call('DELETE', `/api/keywords/${id}`);
+    await loadClients(state.client.id);
+  });
+
+  $('kw-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const keywords = $('kw-input').value.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (!keywords.length) return;
+    try {
+      await call('POST', `/api/clients/${state.client.id}/keywords`, { keywords });
+      $('kw-input').value = '';
+      flash($('kw-msg'), `נוספו ${keywords.length} ביטויים`);
+      await loadClients(state.client.id);
+    } catch (err) { flash($('kw-msg'), err.message, true); }
+  });
+
+  $('client-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = { name: $('c-name').value, domain: $('c-domain').value };
+    try {
+      if (state.editing) {
+        await call('PATCH', `/api/clients/${state.client.id}`, payload);
+        setEditing(false);
+        await loadClients(state.client.id);
+        flash($('c-msg'), 'נשמר');
+      } else {
+        const { id } = await call('POST', '/api/clients', payload);
+        $('c-name').value = $('c-domain').value = '';
+        await loadClients(id);
+        flash($('c-msg'), 'הלקוח נוצר. עכשיו מוסיפים ביטויים.');
+        $('kw-input').focus();
+      }
+    } catch (err) { flash($('c-msg'), err.message, true); }
+  });
+  $('c-edit-current').addEventListener('click', () => setEditing(true));
+  $('c-cancel').addEventListener('click', () => setEditing(false));
+  $('c-delete').addEventListener('click', async () => {
+    if (!confirm(`למחוק את "${state.client.name}" עם כל הביטויים וההיסטוריה שלו? אי אפשר לשחזר.`)) return;
+    await call('DELETE', `/api/clients/${state.client.id}`);
+    setEditing(false);
+    await loadClients();
+  });
+
+  loadClients().catch((err) => { $('empty').hidden = false; $('empty').textContent = 'שגיאה בטעינה: ' + err.message; });
+}
+
+// ---------- מצב הדגמה (?demo=1): נתונים מומצאים, בלי שרת ----------
+
+let demo;
+function demoApi(method, path, body) {
+  if (!demo) {
+    const today = new Date().toISOString().slice(0, 10);
+    const mk = (id, name, domain, kws) => ({ id, name, domain, keywords: kws.map((k, i) => ({ id: id * 100 + i, keyword: k })) });
+    demo = { clients: [
+      mk(1, 'HODIGITAL', 'hodigital.co.il', ['שיווק דיגיטלי 360', 'שיווק דיגיטלי לבעלי עסקים', 'קידום אתרים לעסקים קטנים', 'ניהול קמפיינים בגוגל']),
+      mk(2, 'מסעדת הגפן', 'hagefen.co.il', ['מסעדה כשרה בתל אביב', 'מסעדת שף בצפון']),
+    ], rankings: {} };
+    for (const c of demo.clients) for (const k of c.keywords) {
+      let p = 4 + ((k.id * 7) % 40);
+      demo.rankings[k.id] = Array.from({ length: 75 }, (_, d) => {
+        p = Math.max(1, Math.min(60, p + Math.round((Math.random() - 0.55) * 4)));
+        return { date: shiftDate(today, d - 74), position: p > 50 ? null : p, url: p > 50 ? null : `https://${c.domain}/${k.id % 2 ? 'services/' : ''}` };
+      });
+    }
+  }
+  let m;
+  if (path === '/api/clients' && method === 'GET') return structuredClone(demo.clients);
+  if (path === '/api/status') return { today: '', total: 6, done: 6, failed: 0, serperConfigured: true, maxDepth: 50 };
+  if ((m = path.match(/\/api\/clients\/(\d+)\/rankings/))) {
+    const c = demo.clients.find((c) => c.id === Number(m[1]));
+    const keywords = {};
+    c.keywords.forEach((k) => { keywords[k.id] = demo.rankings[k.id] || []; });
+    return { updated: new Date().toISOString().slice(0, 10), keywords };
+  }
+  throw new Error('במצב הדגמה אי אפשר לשנות נתונים');
 }
 
 init();

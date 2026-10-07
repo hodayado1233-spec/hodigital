@@ -1,0 +1,22 @@
+name = "hodigital-ranks"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# כל 10 דקות נסרקת מנה של ביטויים שעוד לא נבדקו היום (מגבלת 50 בקשות לריצה בתוכנית החינמית).
+# ברגע שכל הביטויים של היום נבדקו, הריצות הבאות לא עושות כלום עד מחר.
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+COUNTRY = "il"
+LANGUAGE = "iw"
+MAX_DEPTH = "50"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hodigital-ranks"
+database_id = "19c738e1-b4de-4c70-bfab-288b62a2d474"
+
+# סודות (מוגדרים ב-Cloudflare, לא בקוד):
+#   SERPER_API_KEY      – המפתח מ-serper.dev
+#   DASHBOARD_PASSWORD  – הסיסמה לדשבורד
