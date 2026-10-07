@@ -55,6 +55,9 @@ button:hover:not(:disabled){filter:brightness(1.1)}
 
 .statusbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:16px;color:var(--muted);font-size:13px}
 .statusbar .warn{color:var(--down)}
+.notice{margin-top:12px;padding:12px 14px;border:1px solid var(--down);border-radius:10px;background:var(--down-bg);font-size:14px}
+.notice code{display:inline-block;max-width:100%;overflow-wrap:anywhere;direction:ltr;font-family:var(--mono);background:var(--panel-2);padding:1px 6px;border-radius:4px;user-select:all}
+.num{font-family:var(--mono)}
 .statusbar button{margin-inline-start:auto;padding:5px 12px;font-size:13px}
 
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0 20px}
@@ -65,7 +68,7 @@ button:hover:not(:disabled){filter:brightness(1.1)}
 .kpi.down .value{color:var(--down)}
 
 .table-wrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:860px}
+table{width:100%;border-collapse:collapse;min-width:1000px}
 th,td{padding:11px 14px;text-align:right;border-bottom:1px solid var(--line);vertical-align:middle}
 th{font-size:12px;color:var(--muted);font-weight:500;user-select:none;white-space:nowrap}
 th[data-sort]{cursor:pointer}
@@ -126,7 +129,6 @@ svg.spark{display:block}
   <div class="wrap">
     <header>
       <div class="brand">HO<span>DIGITAL</span> · מעקב ביטויים</div>
-      <div class="updated" id="updated"></div>
       <div class="controls">
         <select id="client" aria-label="בחירת לקוח"></select>
         <input id="search" type="search" placeholder="חיפוש ביטוי" aria-label="חיפוש ביטוי">
@@ -137,8 +139,9 @@ svg.spark{display:block}
   <main class="wrap">
     <div class="statusbar">
       <span id="status"></span>
-      <button id="scan" type="button" class="ghost">סריקה עכשיו</button>
+      <button id="scan" type="button" class="ghost">עדכון עכשיו</button>
     </div>
+    <div class="notice" id="notice" hidden></div>
     <section class="kpis" id="kpis"></section>
     <div class="table-wrap">
       <table>
@@ -151,6 +154,8 @@ svg.spark{display:block}
             <th data-sort="month">30 ימים</th>
             <th>מגמה (30 יום)</th>
             <th data-sort="best">שיא</th>
+            <th data-sort="clicks">קליקים (30 יום)</th>
+            <th data-sort="impressions">חשיפות (30 יום)</th>
             <th>דף נחיתה</th>
             <th><span hidden>מחיקה</span></th>
           </tr>
@@ -175,7 +180,7 @@ svg.spark{display:block}
           <button type="submit">הוספה</button>
           <span class="msg" id="kw-msg"></span>
         </div>
-        <p class="hint">ביטוי חדש ייסרק בריצה הקרובה (תוך 10 דקות), או מיד בלחיצה על "סריקה עכשיו".</p>
+        <p class="hint">ביטוי חדש יופיע עם היסטוריה של 90 יום בעדכון הקרוב (תוך 10 דקות), או מיד בלחיצה על "עדכון עכשיו". המיקום הוא המיקום הממוצע של האתר בגוגל לפי Search Console.</p>
       </form>
       <form id="client-form">
         <h2 id="client-form-title">לקוח חדש</h2>
@@ -190,7 +195,7 @@ svg.spark{display:block}
           <button type="button" class="danger" id="c-delete" hidden>מחיקת לקוח</button>
           <span class="msg" id="c-msg"></span>
         </div>
-        <p class="hint">דומיין בלי https ובלי www. תתי-דומיינים נספרים אוטומטית. אפשר גם דומיין עם נתיב, למשל user.github.io/site.</p>
+        <p class="hint">דומיין בלי https ובלי www, כמו שהאתר רשום ב-Search Console.</p>
       </form>
     </section>
   </main>
@@ -205,7 +210,8 @@ const state = { clients: [], client: null, data: { keywords: {} }, status: null,
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmtDate = (d) => d ? d.split('-').reverse().join('/') : '';
 const monthName = (ym) => new Date(ym + '-01T12:00:00').toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
-const maxDepth = () => state.status?.maxDepth || 50;
+const fmtPos = (p) => Number.isInteger(p) ? String(p) : p.toFixed(1);
+const fmtNum = (n) => Number(n || 0).toLocaleString('he-IL');
 const prettyUrl = (u) => { try { return decodeURI(u.replace(/^https?:\/\/(www\.)?/, '')); } catch { return u; } };
 
 async function call(method, path, body) {
@@ -223,9 +229,9 @@ function delta(prev, cur) {
   if (p === null && c === null) return { kind: 'flat', text: '—', value: 0 };
   if (p === null) return { kind: 'up', text: '▲ חדש', value: 1000 };
   if (c === null) return { kind: 'down', text: '▼ יצא', value: -1000 };
-  const v = p - c;
-  if (v > 0) return { kind: 'up', text: '▲ ' + v, value: v };
-  if (v < 0) return { kind: 'down', text: '▼ ' + -v, value: v };
+  const v = Math.round((p - c) * 10) / 10;
+  if (v > 0) return { kind: 'up', text: '▲ ' + fmtPos(v), value: v };
+  if (v < 0) return { kind: 'down', text: '▼ ' + fmtPos(-v), value: v };
   return { kind: 'flat', text: '0', value: 0 };
 }
 
@@ -243,7 +249,8 @@ function shiftDate(date, days) {
 }
 
 function sparkline(history) {
-  const pts = history.slice(-30), depth = maxDepth();
+  const pts = history.slice(-30);
+  const depth = Math.max(10, ...pts.map((e) => e.position || 0));
   const w = 110, h = 30, pad = 3;
   if (pts.length < 2) return '<span class="best">—</span>';
   const x = (i) => w - pad - (i * (w - 2 * pad)) / (pts.length - 1); // RTL: היום בצד שמאל
@@ -269,8 +276,11 @@ function buildRows() {
     const cur = h[h.length - 1];
     const today = cur?.date;
     const ranked = h.filter((e) => e.position !== null);
+    const last30 = today ? h.filter((e) => e.date > shiftDate(today, -30)) : [];
     return {
       id, keyword, history: h, cur,
+      clicks: last30.reduce((s, e) => s + (e.clicks || 0), 0),
+      impressions: last30.reduce((s, e) => s + (e.impressions || 0), 0),
       position: cur?.position ?? null,
       url: cur?.url || ranked[ranked.length - 1]?.url || null,
       day: delta(h[h.length - 2], cur),
@@ -285,23 +295,37 @@ function sortValue(r, key) {
   switch (key) {
     case 'keyword': return r.keyword;
     case 'position': case 'best': return r[key] ?? 9999;
+    case 'clicks': case 'impressions': return -r[key];
     default: return -r[key].value;
   }
 }
 
 function renderStatus() {
-  const s = state.status;
+  const s = state.status, c = state.client;
   if (!s) { $('status').textContent = ''; return; }
-  const parts = [`נסרקו היום ${s.done} מתוך ${s.total} ביטויים`];
-  if (s.failed) parts.push(`<span class="warn">${s.failed} נכשלו היום</span>`);
-  if (!s.serperConfigured) parts.push('<span class="warn">חסר מפתח Serper, הסריקה לא פועלת</span>');
-  $('status').innerHTML = parts.join(' · ');
-  $('scan').disabled = !s.serperConfigured || s.done >= s.total;
+  $('status').textContent = state.data.updated
+    ? `נתוני Search Console עד ${fmtDate(state.data.updated)} (גוגל מעדכנת באיחור של יומיים-שלושה)`
+    : '';
+  $('scan').disabled = !s.configured;
+
+  let notice = '';
+  if (!s.configured) {
+    notice = s.secretInvalid
+      ? 'הסוד GSC_SERVICE_ACCOUNT לא תקין. צריך להדביק בו את כל התוכן של קובץ ה-JSON שהורד מ-Google Cloud.'
+      : 'המערכת עוד לא מחוברת ל-Search Console: חסר הסוד GSC_SERVICE_ACCOUNT ב-Cloudflare.';
+  } else if (c?.gsc_error === 'no_access') {
+    notice = `אין גישה לאתר <b>${esc(c.domain)}</b> ב-Search Console. ב-Search Console של האתר: הגדרות ← משתמשים והרשאות ← הוספת משתמש, עם הכתובת <code>${esc(s.serviceAccountEmail)}</code> והרשאה מוגבלת. אחר כך לוחצים "עדכון עכשיו".`;
+  } else if (c?.gsc_error) {
+    notice = 'שגיאה במשיכת הנתונים מ-Search Console: ' + esc(c.gsc_error);
+  } else if (c && c.keywords.length && !c.backfilled) {
+    notice = 'מושכת את ההיסטוריה מ-Search Console. זה לוקח עד כמה דקות.';
+  }
+  $('notice').innerHTML = notice;
+  $('notice').hidden = !notice;
 }
 
 function render() {
   const rows = buildRows();
-  const depth = maxDepth();
   const shown = rows
     .filter((r) => r.keyword.includes(state.query))
     .sort((a, b) => {
@@ -309,36 +333,39 @@ function render() {
       return (typeof va === 'string' ? va.localeCompare(vb, 'he') : va - vb) * state.sort.dir;
     });
 
-  $('updated').textContent = state.data.updated ? 'עודכן: ' + fmtDate(state.data.updated) : '';
   $('kw-client-name').textContent = state.client ? state.client.name : 'לקוח';
   $('kw-form').querySelector('button').disabled = !state.client;
   $('c-edit-current').hidden = !state.client || state.editing;
 
   const ranked = rows.filter((r) => r.position !== null);
   const avg = ranked.length ? (ranked.reduce((s, r) => s + r.position, 0) / ranked.length).toFixed(1) : '—';
+  const clicks = rows.reduce((s, r) => s + r.clicks, 0);
   $('kpis').innerHTML = [
     ['ביטויים במעקב', rows.length, ''],
     ['מיקום ממוצע', avg, ''],
     ['בטופ 3', ranked.filter((r) => r.position <= 3).length, ''],
     ['בטופ 10', ranked.filter((r) => r.position <= 10).length, ''],
-    ['עלו היום', rows.filter((r) => r.day.kind === 'up').length, 'up'],
-    ['ירדו היום', rows.filter((r) => r.day.kind === 'down').length, 'down'],
+    ['קליקים ב-30 יום', fmtNum(clicks), ''],
+    ['עלו מאתמול', rows.filter((r) => r.day.kind === 'up').length, 'up'],
+    ['ירדו מאתמול', rows.filter((r) => r.day.kind === 'down').length, 'down'],
   ].map(([l, v, c]) => `<div class="kpi ${c}"><div class="label">${l}</div><div class="value">${v}</div></div>`).join('');
 
   const items = rows.filter((r) => r.cur).map((r) =>
-    `<span class="ticker-item"><b>${esc(r.keyword)}</b> ${r.position ?? '—'} ${chip(r.day)}</span>`).join('');
+    `<span class="ticker-item"><b>${esc(r.keyword)}</b> ${r.position !== null ? fmtPos(r.position) : '—'} ${chip(r.day)}</span>`).join('');
   $('ticker-track').innerHTML = items + items;
   $('ticker').hidden = !items;
 
   $('rows').innerHTML = shown.map((r) => `
     <tr>
       <td class="kw">${esc(r.keyword)}</td>
-      <td>${r.position !== null ? `<span class="pos">${r.position}</span>` : `<span class="pos none">${r.cur ? 'לא בטופ ' + depth : 'טרם נסרק'}</span>`}</td>
+      <td>${r.position !== null ? `<span class="pos">${fmtPos(r.position)}</span>` : `<span class="pos none">${r.cur ? 'אין חשיפות' : 'ממתין לנתונים'}</span>`}</td>
       <td>${chip(r.day)}</td>
       <td>${chip(r.week)}</td>
       <td>${chip(r.month)}</td>
       <td>${sparkline(r.history)}</td>
-      <td class="best">${r.best ?? '—'}</td>
+      <td class="best">${r.best !== null ? fmtPos(r.best) : '—'}</td>
+      <td class="num">${fmtNum(r.clicks)}</td>
+      <td class="num">${fmtNum(r.impressions)}</td>
       <td class="lp">${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener" title="${esc(r.url)}">${esc(prettyUrl(r.url))}</a>` : '—'}</td>
       <td><button class="del" type="button" data-del="${r.id}" title="הסרת הביטוי" aria-label="הסרת ${esc(r.keyword)}">×</button></td>
     </tr>`).join('');
@@ -378,6 +405,8 @@ function monthReport(ym) {
     const ranked = inMonth.filter((e) => e.position !== null);
     return {
       keyword,
+      clicks: inMonth.reduce((s, e) => s + (e.clicks || 0), 0),
+      impressions: inMonth.reduce((s, e) => s + (e.impressions || 0), 0),
       start: first?.position ?? null,
       end: last?.position ?? null,
       change: last ? delta(first, last) : delta(undefined),
@@ -389,27 +418,28 @@ function monthReport(ym) {
 }
 
 function exportCsv() {
-  const ym = $('month').value, depth = maxDepth();
-  const out = (p) => p ?? `מחוץ לטופ ${depth}`;
-  const lines = [['ביטוי', 'מיקום בתחילת החודש', 'מיקום בסוף החודש', 'שינוי', 'המיקום הטוב ביותר בחודש', 'דף נחיתה']];
+  const ym = $('month').value;
+  const out = (p) => p !== null ? fmtPos(p) : 'אין חשיפות';
+  const lines = [['ביטוי', 'מיקום בתחילת החודש', 'מיקום בסוף החודש', 'שינוי', 'המיקום הטוב ביותר בחודש', 'קליקים', 'חשיפות', 'דף נחיתה']];
   monthReport(ym).filter((r) => r.scanned).forEach((r) => {
     const change = r.change.kind === 'flat' ? '0' : r.change.text.replace('▲ ', '+').replace('▼ ', '-');
-    lines.push([r.keyword, out(r.start), out(r.end), change, r.best ?? '—', r.url ? prettyUrl(r.url) : '—']);
+    lines.push([r.keyword, out(r.start), out(r.end), change, r.best !== null ? fmtPos(r.best) : '—', r.clicks, r.impressions, r.url ? prettyUrl(r.url) : '—']);
   });
   const csv = '﻿' + lines.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   a.download = `דוח מיקומים - ${state.client.name} - ${ym}.csv`;
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 function printReport() {
-  const ym = $('month').value, depth = maxDepth();
+  const ym = $('month').value;
   const rows = monthReport(ym).filter((r) => r.scanned);
+  const clicks = rows.reduce((s, r) => s + r.clicks, 0);
   const ups = rows.filter((r) => r.change.kind === 'up').length;
   const top10 = rows.filter((r) => r.end !== null && r.end <= 10).length;
-  const out = (p) => p ?? `<span style="color:#5f5a69">מחוץ לטופ ${depth}</span>`;
+  const out = (p) => p !== null ? fmtPos(p) : '<span style="color:#5f5a69">אין חשיפות</span>';
   $('report').innerHTML = `
     <h1>דוח מיקומים בגוגל · ${esc(state.client.name)}</h1>
     <div class="sub">${monthName(ym)} · ${esc(state.client.domain)}</div>
@@ -417,12 +447,13 @@ function printReport() {
       <div><b>${rows.length}</b>ביטויים במעקב</div>
       <div><b>${ups}</b>ביטויים שהשתפרו</div>
       <div><b>${top10}</b>ביטויים בעמוד הראשון</div>
+      <div><b>${fmtNum(clicks)}</b>קליקים מהביטויים</div>
     </div>
     <table>
-      <thead><tr><th>ביטוי</th><th>תחילת החודש</th><th>סוף החודש</th><th>שינוי</th><th>שיא החודש</th><th>דף נחיתה</th></tr></thead>
-      <tbody>${rows.map((r) => `<tr><td class="kw">${esc(r.keyword)}</td><td>${out(r.start)}</td><td><b>${out(r.end)}</b></td><td>${chip(r.change)}</td><td>${r.best ?? '—'}</td><td class="lp">${r.url ? esc(prettyUrl(r.url)) : '—'}</td></tr>`).join('')}</tbody>
+      <thead><tr><th>ביטוי</th><th>תחילת החודש</th><th>סוף החודש</th><th>שינוי</th><th>שיא החודש</th><th>קליקים</th><th>חשיפות</th><th>דף נחיתה</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr><td class="kw">${esc(r.keyword)}</td><td>${out(r.start)}</td><td><b>${out(r.end)}</b></td><td>${chip(r.change)}</td><td>${r.best !== null ? fmtPos(r.best) : '—'}</td><td>${fmtNum(r.clicks)}</td><td>${fmtNum(r.impressions)}</td><td class="lp">${r.url ? esc(prettyUrl(r.url)) : '—'}</td></tr>`).join('')}</tbody>
     </table>
-    <footer>הופק על ידי HODIGITAL · הודיה ארנטרוי · 054-725-3007</footer>`;
+    <footer>מקור הנתונים: Google Search Console (מיקום ממוצע). הופק על ידי HODIGITAL · הודיה ארנטרוי · 054-725-3007</footer>`;
   const prevTitle = document.title;
   document.title = `דוח מיקומים - ${state.client.name} - ${monthName(ym)}`;
   window.print();
@@ -483,13 +514,13 @@ function init() {
 
   $('scan').addEventListener('click', async () => {
     const btn = $('scan');
-    btn.disabled = true; btn.textContent = 'סורקת...';
+    btn.disabled = true; btn.textContent = 'מעדכנת...';
     try {
       const r = await call('POST', '/api/scan');
       if (r.error) alert(r.error);
       await loadClient(state.client?.id);
     } catch (err) { alert(err.message); }
-    btn.textContent = 'סריקה עכשיו';
+    btn.textContent = 'עדכון עכשיו';
     renderStatus();
   });
 
@@ -550,7 +581,7 @@ let demo;
 function demoApi(method, path, body) {
   if (!demo) {
     const today = new Date().toISOString().slice(0, 10);
-    const mk = (id, name, domain, kws) => ({ id, name, domain, keywords: kws.map((k, i) => ({ id: id * 100 + i, keyword: k })) });
+    const mk = (id, name, domain, kws) => ({ id, name, domain, backfilled: 1, gsc_error: null, keywords: kws.map((k, i) => ({ id: id * 100 + i, keyword: k })) });
     demo = { clients: [
       mk(1, 'HODIGITAL', 'hodigital.co.il', ['שיווק דיגיטלי 360', 'שיווק דיגיטלי לבעלי עסקים', 'קידום אתרים לעסקים קטנים', 'ניהול קמפיינים בגוגל']),
       mk(2, 'מסעדת הגפן', 'hagefen.co.il', ['מסעדה כשרה בתל אביב', 'מסעדת שף בצפון']),
@@ -559,13 +590,15 @@ function demoApi(method, path, body) {
       let p = 4 + ((k.id * 7) % 40);
       demo.rankings[k.id] = Array.from({ length: 75 }, (_, d) => {
         p = Math.max(1, Math.min(60, p + Math.round((Math.random() - 0.55) * 4)));
-        return { date: shiftDate(today, d - 74), position: p > 50 ? null : p, url: p > 50 ? null : `https://${c.domain}/${k.id % 2 ? 'services/' : ''}` };
+        const pos = p > 50 ? null : Math.round((p + Math.random()) * 10) / 10;
+        const impressions = pos ? Math.round(400 / pos) : 0;
+        return { date: shiftDate(today, d - 74), position: pos, url: pos ? `https://${c.domain}/${k.id % 2 ? 'services/' : ''}` : null, impressions, clicks: Math.round(impressions * (pos && pos < 4 ? 0.2 : 0.03)) };
       });
     }
   }
   let m;
   if (path === '/api/clients' && method === 'GET') return structuredClone(demo.clients);
-  if (path === '/api/status') return { today: '', total: 6, done: 6, failed: 0, serperConfigured: true, maxDepth: 50 };
+  if (path === '/api/status') return { today: '', configured: true, serviceAccountEmail: 'demo@example.iam.gserviceaccount.com' };
   if ((m = path.match(/\/api\/clients\/(\d+)\/rankings/))) {
     const c = demo.clients.find((c) => c.id === Number(m[1]));
     const keywords = {};
