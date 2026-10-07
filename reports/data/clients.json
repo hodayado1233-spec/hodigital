@@ -1,0 +1,10 @@
+{
+  "clients": [
+    {
+      "id": "demo",
+      "name": "לקוח לדוגמה בע\"מ",
+      "domain": "example.co.il",
+      "reports": ["2026-09"]
+    }
+  ]
+}

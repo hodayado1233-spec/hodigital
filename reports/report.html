@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>דוח חודשי | HODIGITAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0c0a10; --paper:#f5f4f7; --white:#fff;
+  --violet:#7b61ff; --violet-d:#5a3ff0; --haze:#ebe7ff;
+  --green:#0fa968; --neon:#2bff88;
+  --text:#0c0a10; --muted:#5f5a69; --line:#e3e0e8;
+  --up:#0b7a4b; --down:#c0392b;
+  --surface:#fff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--text);font-family:Heebo,system-ui,sans-serif;line-height:1.55;font-size:15px}
+.wrap{max-width:1040px;margin:0 auto;padding:24px 16px 64px}
+.toolbar{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.toolbar a,.toolbar button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--white);color:var(--text);padding:8px 14px;border-radius:999px;cursor:pointer;text-decoration:none}
+.toolbar button.primary{background:var(--violet);border-color:var(--violet);color:#fff}
+
+header.hero{background:var(--ink);color:#fff;border-radius:20px;padding:28px;position:relative;overflow:hidden}
+header.hero .brand{font-weight:800;letter-spacing:.08em;font-size:13px;color:#c4b8ff}
+header.hero h1{margin:8px 0 4px;font-size:30px;line-height:1.2}
+header.hero .meta{color:#a49eb2;font-size:14px}
+header.hero .demo{display:inline-block;margin-top:10px;background:var(--neon);color:var(--ink);font-weight:700;font-size:12px;padding:3px 10px;border-radius:999px}
+.summary{background:var(--white);border-radius:16px;padding:20px 22px;margin-top:16px;border:1px solid var(--line)}
+.summary h2{margin:0 0 6px;font-size:16px;color:var(--muted);font-weight:500}
+.summary p{margin:0;font-size:16px}
+
+section{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:22px;margin-top:16px;break-inside:avoid}
+section > h2{margin:0 0 4px;font-size:20px}
+section > .sub{margin:0 0 16px;color:var(--muted);font-size:14px}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:16px}
+.kpi{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:16px}
+.kpi .label{color:var(--muted);font-size:13px}
+.kpi .value{font-size:30px;font-weight:800;line-height:1.15;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .delta{font-size:13px;margin-top:4px}
+.up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--muted)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:right;color:var(--muted);font-weight:500;border-bottom:1px solid var(--line);padding:8px 6px}
+td{border-bottom:1px solid var(--line);padding:9px 6px;vertical-align:top}
+td.num,th.num{text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.pos{display:inline-block;min-width:34px;text-align:center;font-weight:700;border-radius:8px;padding:2px 6px;background:var(--paper)}
+.pos.top3{background:var(--violet);color:#fff}
+.pos.top10{background:var(--haze);color:var(--violet-d)}
+.url{color:var(--muted);font-size:12px;direction:ltr;unicode-bidi:embed}
+.table-scroll{overflow-x:auto}
+
+.dist{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.dist div{background:var(--paper);border-radius:12px;padding:10px;text-align:center}
+.dist b{display:block;font-size:22px}
+.dist span{font-size:12px;color:var(--muted)}
+
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .axis{fill:var(--muted);font-size:11px}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .lbl{fill:var(--text);font-size:12px;font-weight:700}
+.chart .hit{fill:transparent;cursor:default}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-size:12px;padding:6px 10px;border-radius:8px;white-space:nowrap;transform:translate(50%,-110%);opacity:0;transition:opacity .1s}
+.tip.on{opacity:1}
+
+.hbar{display:grid;grid-template-columns:110px 1fr 48px;gap:10px;align-items:center;margin:8px 0;font-size:14px}
+.hbar .track{background:var(--paper);border-radius:6px;height:14px;position:relative}
+.hbar .fill{position:absolute;inset-inline-start:0;top:0;bottom:0;border-radius:6px;background:var(--violet)}
+.hbar .v{text-align:left;font-variant-numeric:tabular-nums;font-weight:700}
+.note{font-size:12px;color:var(--muted);margin-top:10px}
+
+.timeline{list-style:none;margin:0;padding:0}
+.timeline li{display:grid;grid-template-columns:88px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.timeline li:last-child{border-bottom:0}
+.timeline .date{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:11px;font-weight:700;background:var(--haze);color:var(--violet-d);border-radius:999px;padding:1px 9px;margin-inline-end:6px}
+.timeline b{font-weight:700}
+.timeline p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.next{margin:0;padding-inline-start:20px}
+.next li{margin:6px 0}
+
+footer{color:var(--muted);font-size:12px;margin-top:20px;text-align:center}
+.error{background:#fff3f2;border:1px solid #f3c4bf;color:#8a1f14;padding:16px;border-radius:12px}
+
+@media print{
+  body{background:#fff;font-size:12px}
+  .toolbar{display:none}
+  .wrap{padding:0;max-width:none}
+  section,.kpi,.summary{border-color:#ddd}
+  header.hero{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pos,.hbar .fill,.tag,.dist div{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="toolbar">
+    <a href="./">→ כל הדוחות</a>
+    <button class="primary" onclick="window.print()">שמירה כ-PDF / הדפסה</button>
+  </div>
+  <main id="app"><p>טוען דוח…</p></main>
+  <footer>הדוח הוכן על ידי HODIGITAL · הודיה ארנטרוי</footer>
+</div>
+
+<script>
+const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const fmt = n => n == null ? '—' : Number(n).toLocaleString('he-IL');
+const monthName = ym => { const [y, m] = ym.split('-'); return `${MONTHS[+m - 1]} ${y}`; };
+const shortMonth = ym => MONTHS[+ym.split('-')[1] - 1];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = d => { const [y, m, day] = d.split('-'); return `${+day}.${+m}.${y}`; };
+
+// Percentage change for "higher is better" metrics.
+function delta(value, prev) {
+  if (prev == null || prev === 0) return '<div class="delta flat">אין נתון להשוואה</div>';
+  const pct = Math.round((value - prev) / prev * 100);
+  if (pct === 0) return '<div class="delta flat">ללא שינוי מהחודש הקודם</div>';
+  const cls = pct > 0 ? 'up' : 'down';
+  const arrow = pct > 0 ? '▲' : '▼';
+  return `<div class="delta ${cls}">${arrow} ${Math.abs(pct)}% מהחודש הקודם (${fmt(prev)})</div>`;
+}
+
+// Position change: lower position number is better.
+function posChange(pos, prev) {
+  if (pos == null && prev == null) return '<span class="flat">—</span>';
+  if (prev == null) return '<span class="up">חדש</span>';
+  if (pos == null) return '<span class="down">יצא מ-100</span>';
+  const d = prev - pos;
+  if (d === 0) return '<span class="flat">ללא שינוי</span>';
+  return d > 0 ? `<span class="up">▲ ${d}</span>` : `<span class="down">▼ ${-d}</span>`;
+}
+
+function posBadge(p) {
+  if (p == null) return '<span class="pos">100+</span>';
+  const cls = p <= 3 ? 'top3' : p <= 10 ? 'top10' : '';
+  return `<span class="pos ${cls}">${p}</span>`;
+}
+
+// Tooltip helper shared by all charts.
+function attachTips(container) {
+  const tip = container.querySelector('.tip');
+  container.querySelectorAll('[data-tip]').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      tip.textContent = el.dataset.tip;
+      const box = container.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      tip.style.left = (r.left - box.left + r.width / 2 - tip.offsetWidth) + 'px';
+      tip.style.top = (r.top - box.top) + 'px';
+      tip.classList.add('on');
+    });
+    el.addEventListener('mouseleave', () => tip.classList.remove('on'));
+  });
+}
+
+// Single-series line chart. Time runs left-to-right, as in Google Analytics.
+function lineChart(months, values, color, unit) {
+  const W = 480, H = 200, padX = 28, padTop = 24, padBottom = 28;
+  const max = Math.max(...values) * 1.15 || 1;
+  const step = (W - padX * 2) / Math.max(values.length - 1, 1);
+  const x = i => padX + i * step;
+  const y = v => padTop + (H - padTop - padBottom) * (1 - v / max);
+  const pts = values.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+  const grid = [0.25, 0.5, 0.75, 1].map(f => `<line class="grid" x1="${padX}" x2="${W - padX}" y1="${y(max * f / 1.15)}" y2="${y(max * f / 1.15)}"/>`).join('');
+  const last = values.length - 1;
+  const dots = values.map((v, i) => `
+    <circle cx="${x(i)}" cy="${y(v)}" r="${i === last ? 5 : 3.5}" fill="${i === last ? color : 'var(--surface)'}" stroke="${color}" stroke-width="2"/>
+    <rect class="hit" x="${x(i) - step / 2}" y="0" width="${step}" height="${H}" data-tip="${monthName(months[i])}: ${fmt(v)} ${unit}"/>`).join('');
+  const labels = months.map((m, i) => `<text class="axis" x="${x(i)}" y="${H - 6}" text-anchor="middle">${shortMonth(m)}</text>`).join('');
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="מגמה חודשית" direction="ltr">
+    ${grid}<line class="grid" x1="${padX}" x2="${W - padX}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>
+    ${dots}${labels}
+    <text class="lbl" x="${x(last)}" y="${y(values[last]) - 12}" text-anchor="middle">${fmt(values[last])}</text>
+  </svg><div class="tip"></div></div>`;
+}
+
+// Single-series column chart.
+function barChart(months, values, color, unit) {
+  const W = 480, H = 200, padX = 16, padTop = 24, padBottom = 28;
+  const max = Math.max(...values) * 1.15 || 1;
+  const slot = (W - padX * 2) / values.length;
+  const bw = Math.min(36, slot * 0.6);
+  const y = v => padTop + (H - padTop - padBottom) * (1 - v / max);
+  const base = y(0);
+  const bars = values.map((v, i) => {
+    const cx = padX + slot * i + slot / 2;
+    const top = y(v), h = Math.max(base - top, 0), r = Math.min(4, h);
+    // Rounded top corners, flat on the baseline.
+    const d = `M${cx - bw / 2},${base} V${top + r} Q${cx - bw / 2},${top} ${cx - bw / 2 + r},${top} H${cx + bw / 2 - r} Q${cx + bw / 2},${top} ${cx + bw / 2},${top + r} V${base} Z`;
+    return `<path d="${d}" fill="${color}"/>
+      <text class="lbl" x="${cx}" y="${top - 6}" text-anchor="middle">${fmt(v)}</text>
+      <text class="axis" x="${cx}" y="${H - 6}" text-anchor="middle">${shortMonth(months[i])}</text>
+      <rect class="hit" x="${cx - slot / 2}" y="0" width="${slot}" height="${H}" data-tip="${monthName(months[i])}: ${fmt(v)} ${unit}"/>`;
+  }).join('');
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="עמודות לפי חודש">
+    <line class="grid" x1="${padX}" x2="${W - padX}" y1="${base}" y2="${base}" stroke="var(--muted)"/>${bars}
+  </svg><div class="tip"></div></div>`;
+}
+
+function hbars(items, color) {
+  const max = Math.max(...items.map(i => i.value), 1);
+  return items.map(i => `<div class="hbar"><span>${esc(i.name)}</span>
+    <div class="track"><div class="fill" style="width:${i.value / max * 100}%;background:${color}"></div></div>
+    <span class="v">${fmt(i.value)}</span></div>`).join('');
+}
+
+function render(r) {
+  const k = r.kpis;
+  const kws = r.rankings?.keywords || [];
+  const inRange = (a, b) => kws.filter(w => w.position != null && w.position >= a && w.position <= b).length;
+  const trend = r.trend || {};
+
+  const kpiTile = (label, m) => m ? `<div class="kpi"><div class="label">${label}</div><div class="value">${fmt(m.value)}</div>${delta(m.value, m.prev)}</div>` : '';
+
+  document.title = `דוח ${monthName(r.month)} – ${r.client.name} | HODIGITAL`;
+  document.getElementById('app').innerHTML = `
+  <header class="hero">
+    <div class="brand">HODIGITAL · דוח קידום חודשי</div>
+    <h1>${esc(r.client.name)}</h1>
+    <div class="meta">${monthName(r.month)} · <span dir="ltr">${esc(r.client.domain)}</span></div>
+    ${r.demo ? '<span class="demo">נתוני דוגמה</span>' : ''}
+  </header>
+
+  ${r.summary ? `<div class="summary"><h2>בשורה התחתונה</h2><p>${esc(r.summary)}</p></div>` : ''}
+
+  <div class="kpis">
+    ${kpiTile('כניסות מגוגל (Search Console)', k.gscClicks)}
+    ${kpiTile('חשיפות בגוגל', k.gscImpressions)}
+    ${kpiTile('ביקורים אורגניים (Analytics)', k.organicSessions)}
+    ${kpiTile('כניסות מכלי AI', k.aiSessions)}
+    ${kpiTile('לידים מהאתר', k.leads)}
+  </div>
+
+  ${kws.length ? `<section>
+    <h2>מיקומים בגוגל</h2>
+    <p class="sub">נבדק ב-${fmtDate(r.rankings.checkedAt)} ב-${esc(r.rankings.engine)}, ${r.rankings.device === 'mobile' ? 'מובייל' : 'דסקטופ'}, בגלישה אנונימית (בלי היסטוריה אישית).</p>
+    <div class="dist">
+      <div><b>${inRange(1, 3)}</b><span>מקומות 1–3</span></div>
+      <div><b>${inRange(4, 10)}</b><span>מקומות 4–10</span></div>
+      <div><b>${inRange(11, 20)}</b><span>מקומות 11–20</span></div>
+      <div><b>${kws.length - inRange(1, 20)}</b><span>מעבר ל-20</span></div>
+    </div>
+    <div class="table-scroll"><table>
+      <thead><tr><th>ביטוי</th><th class="num">מיקום</th><th class="num">שינוי</th><th>עמוד מדורג</th></tr></thead>
+      <tbody>${kws.map(w => `<tr>
+        <td>${esc(w.keyword)}</td>
+        <td class="num">${posBadge(w.position)}</td>
+        <td class="num">${posChange(w.position, w.prev)}</td>
+        <td><span class="url">${esc(w.url || '—')}</span></td></tr>`).join('')}</tbody>
+    </table></div>
+  </section>` : ''}
+
+  ${trend.months ? `<div class="grid2">
+    <section>
+      <h2>ביקורים אורגניים</h2>
+      <p class="sub">כניסות מחיפוש בגוגל ב-6 החודשים האחרונים (Google Analytics)</p>
+      ${lineChart(trend.months, trend.organicSessions, 'var(--violet)', 'ביקורים')}
+    </section>
+    <section>
+      <h2>לידים לפי חודש</h2>
+      <p class="sub">פניות שהתקבלו דרך האתר</p>
+      ${barChart(trend.months, trend.leads, 'var(--violet)', 'לידים')}
+    </section>
+  </div>` : ''}
+
+  ${r.ai ? `<section>
+    <h2>כניסות מכלי בינה מלאכותית</h2>
+    <p class="sub">אנשים ששאלו את ChatGPT, Gemini וכלים דומים והגיעו לאתר מהתשובה</p>
+    <div class="grid2">
+      <div>${hbars(r.ai.sources, 'var(--green)')}</div>
+      <div>${trend.aiSessions ? barChart(trend.months, trend.aiSessions, 'var(--green)', 'כניסות מ-AI') : ''}</div>
+    </div>
+    ${r.ai.note ? `<p class="note">${esc(r.ai.note)}</p>` : ''}
+  </section>` : ''}
+
+  ${r.leads ? `<section>
+    <h2>לידים</h2>
+    <p class="sub">${fmt(k.leads?.value)} פניות החודש</p>
+    <div class="grid2">
+      <div><h3 style="font-size:15px;margin:0 0 6px">לפי סוג פנייה</h3>${hbars(r.leads.byType, 'var(--violet)')}</div>
+      <div><h3 style="font-size:15px;margin:0 0 6px">לפי מקור הגעה</h3>${hbars(r.leads.bySource, 'var(--violet)')}</div>
+    </div>
+  </section>` : ''}
+
+  ${r.topQueries?.length ? `<section>
+    <h2>החיפושים שהביאו הכי הרבה כניסות</h2>
+    <p class="sub">מתוך Google Search Console</p>
+    <div class="table-scroll"><table>
+      <thead><tr><th>חיפוש</th><th class="num">כניסות</th><th class="num">חשיפות</th><th class="num">מיקום ממוצע</th></tr></thead>
+      <tbody>${r.topQueries.map(q => `<tr><td>${esc(q.query)}</td><td class="num">${fmt(q.clicks)}</td><td class="num">${fmt(q.impressions)}</td><td class="num">${q.position.toFixed(1)}</td></tr>`).join('')}</tbody>
+    </table></div>
+  </section>` : ''}
+
+  ${r.optimizations?.length ? `<section>
+    <h2>מה עשינו החודש באתר</h2>
+    <p class="sub">${r.optimizations.length} פעולות אופטימיזציה</p>
+    <ul class="timeline">${r.optimizations.map(o => `<li>
+      <span class="date">${fmtDate(o.date)}</span>
+      <div><span class="tag">${esc(o.category)}</span><b>${esc(o.title)}</b>${o.details ? `<p>${esc(o.details)}</p>` : ''}</div>
+    </li>`).join('')}</ul>
+  </section>` : ''}
+
+  ${r.nextSteps?.length ? `<section>
+    <h2>התוכנית לחודש הבא</h2>
+    <ol class="next">${r.nextSteps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+  </section>` : ''}
+  `;
+  document.querySelectorAll('.chart').forEach(attachTips);
+}
+
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const c = params.get('c'), m = params.get('m');
+  const app = document.getElementById('app');
+  if (!c || !m || !/^[\w-]+$/.test(c) || !/^\d{4}-\d{2}$/.test(m)) {
+    app.innerHTML = '<div class="error">חסר לקוח או חודש בכתובת. לדוגמה: report.html?c=demo&amp;m=2026-09</div>';
+    return;
+  }
+  try {
+    const res = await fetch(`data/${c}/${m}.json`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(res.status);
+    render(await res.json());
+  } catch (e) {
+    app.innerHTML = `<div class="error">לא הצלחתי לטעון את הדוח (data/${esc(c)}/${esc(m)}.json). אם פתחת את הקובץ ישירות מהמחשב, צריך להריץ אותו דרך שרת (ראו README).</div>`;
+  }
+})();
+</script>
+</body>
+</html>

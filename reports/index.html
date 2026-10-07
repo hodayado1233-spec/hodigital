@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>דוחות לקוחות | HODIGITAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0c0a10;--paper:#f5f4f7;--white:#fff;--violet:#7b61ff;--haze:#ebe7ff;--violet-d:#5a3ff0;--muted:#5f5a69;--line:#e3e0e8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Heebo,system-ui,sans-serif;line-height:1.55}
+.wrap{max-width:880px;margin:0 auto;padding:32px 16px 64px}
+.brand{font-weight:800;letter-spacing:.08em;font-size:13px;color:var(--violet)}
+h1{margin:4px 0 24px;font-size:28px}
+.client{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:12px}
+.client h2{margin:0;font-size:18px}
+.client .domain{color:var(--muted);font-size:13px}
+.months{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.months a{background:var(--haze);color:var(--violet-d);text-decoration:none;font-weight:500;font-size:14px;padding:6px 14px;border-radius:999px}
+.months a:hover{background:var(--violet);color:#fff}
+.error{background:#fff3f2;border:1px solid #f3c4bf;color:#8a1f14;padding:16px;border-radius:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">HODIGITAL</div>
+  <h1>דוחות חודשיים ללקוחות</h1>
+  <div id="list">טוען…</div>
+</div>
+<script>
+const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const monthName = ym => { const [y, m] = ym.split('-'); return `${MONTHS[+m - 1]} ${y}`; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+fetch('data/clients.json', { cache: 'no-store' })
+  .then(r => r.json())
+  .then(({ clients }) => {
+    document.getElementById('list').innerHTML = clients.map(c => `
+      <div class="client">
+        <h2>${esc(c.name)}</h2>
+        <div class="domain" dir="ltr">${esc(c.domain)}</div>
+        <div class="months">${[...c.reports].sort().reverse().map(m =>
+          `<a href="report.html?c=${encodeURIComponent(c.id)}&m=${m}">${monthName(m)}</a>`).join('')}</div>
+      </div>`).join('');
+  })
+  .catch(() => {
+    document.getElementById('list').innerHTML = '<div class="error">לא הצלחתי לטעון את data/clients.json</div>';
+  });
+</script>
+</body>
+</html>
