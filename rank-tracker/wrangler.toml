@@ -1,6 +1,7 @@
 name = "hodigital-ranks"
 main = "src/index.js"
 compatibility_date = "2026-09-01"
+account_id = "e95c74dc3459cf5eaa693c0f26b65971"
 
 # מ-07:00 (שעון ישראל) כל 10 דקות בודקים מה עוד לא עודכן היום: מיקום מדויק (Serper) ונתוני Search Console.
 # אחרי שהכול עודכן, הריצות הבאות לא עושות כלום עד מחר.
