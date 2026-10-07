@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://hodi-digital.co.il/sitemap.xml
+# The site is currently set to noindex, nofollow via a meta tag in index.html.
+# Crawling stays allowed so search engines can read that tag.
