@@ -9,14 +9,22 @@
 - **דוח חודשי:** בתחתית הדשבורד, בחירת חודש ואז ייצוא לאקסל או דוח להדפסה / PDF.
 - **תצוגת דוגמה עם נתונים מומצאים:** מוסיפים `?demo=1` לכתובת.
 
-## העלאה ראשונה
+## העלאה ראשונה (הדבקה ידנית, בלי טרמינל)
 
-1. ב-Cloudflare: **My Profile → API Tokens → Create Token**, תבנית **Edit Cloudflare Workers**, ולהוסיף הרשאה **D1: Edit**.
-2. לשמור את הטוקן בהגדרות הסביבה של Claude Code בשם `CLOUDFLARE_API_TOKEN`, לפתוח שיחה חדשה ולבקש מ-Claude להעלות את המערכת.
-   או להריץ בעצמך מתוך התיקייה הזו: `npm install` ואחריו `npx wrangler deploy`.
-3. אחרי ההעלאה, ב-Cloudflare: **Workers & Pages → hodigital-ranks → Settings → Variables and Secrets** ולהוסיף שני סודות (Secret):
-   - `SERPER_API_KEY`: המפתח מ-[serper.dev](https://serper.dev)
-   - `DASHBOARD_PASSWORD`: הסיסמה לדשבורד. בכניסה הדפדפן יבקש שם משתמש וסיסמה: שם המשתמש לא משנה, רק הסיסמה.
+מסד הנתונים `hodigital-ranks` כבר קיים בחשבון עם כל הטבלאות.
+
+1. **יצירת ה-Worker:** ב-Cloudflare נכנסים ל-**Workers & Pages → Create → Start with Hello World**, קוראים לו `hodigital-ranks` ולוחצים **Deploy**.
+2. **הדבקת הקוד:** לוחצים **Edit code**, מוחקים את כל מה שיש בעורך, מדביקים את כל התוכן של `dist/worker.js` ולוחצים **Deploy**.
+3. **חיבור מסד הנתונים:** ב-Worker נכנסים ל-**Settings → Bindings → Add → D1 database**.
+   - Variable name: `DB` (באותיות גדולות)
+   - D1 database: `hodigital-ranks`
+4. **סודות:** ב-**Settings → Variables and Secrets → Add** מוסיפים שניים, ובכל אחד בוחרים Type = **Secret**:
+   - `DASHBOARD_PASSWORD`: הסיסמה לדשבורד
+   - `SERPER_API_KEY`: המפתח מ-[serper.dev](https://serper.dev). אפשר להוסיף אותו גם מאוחר יותר.
+5. **סריקה אוטומטית:** ב-**Settings → Trigger Events → Add → Cron Triggers** מזינים `*/10 * * * *` (כל 10 דקות).
+6. **כניסה:** הכתובת מופיעה ב-**Settings → Domains & Routes** (מסתיימת ב-`workers.dev`). בכניסה הדפדפן יבקש שם משתמש וסיסמה: שם המשתמש לא משנה, רק הסיסמה.
+
+כשמשנים קוד בעתיד: מריצים `npm run build:paste` ומדביקים מחדש את `dist/worker.js` (שלב 2 בלבד).
 
 ## עלות
 
