@@ -2,7 +2,7 @@
 // context and writes them into that month's report file.
 //
 // Usage:
-//   node rank-check.mjs <client-id> <YYYY-MM> [--headed] [--mobile] [--pages=3]
+//   node rank-check.mjs <client-id> <YYYY-MM> [--headed] [--mobile] [--pages=3] [--dry-run]
 //
 // Reads  reports/data/<client>/keywords.json
 // Writes reports/data/<client>/<YYYY-MM>.json  (only the "rankings" key; the rest is kept)
@@ -19,7 +19,7 @@ const flag = name => args.includes(`--${name}`);
 const opt = (name, def) => (args.find(a => a.startsWith(`--${name}=`)) || '').split('=')[1] || def;
 
 if (!clientId || !/^\d{4}-\d{2}$/.test(month || '')) {
-  console.error('Usage: node rank-check.mjs <client-id> <YYYY-MM> [--headed] [--mobile] [--pages=3]');
+  console.error('Usage: node rank-check.mjs <client-id> <YYYY-MM> [--headed] [--mobile] [--pages=3] [--dry-run]');
   process.exit(1);
 }
 
@@ -114,6 +114,11 @@ try {
   }
 } finally {
   await browser.close();
+}
+
+if (flag('dry-run')) {
+  console.log('\nDry run – nothing saved.');
+  process.exit(0);
 }
 
 const reportPath = path.join(dir, `${month}.json`);
