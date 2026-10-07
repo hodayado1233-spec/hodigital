@@ -2,8 +2,8 @@ name = "hodigital-ranks"
 main = "src/index.js"
 compatibility_date = "2026-09-01"
 
-# כל 10 דקות בודקים אם יש לקוח שלא עודכן היום, ומושכים לו נתונים מ-Search Console.
-# אחרי שכל הלקוחות עודכנו, הריצות הבאות לא עושות כלום עד מחר.
+# מ-07:00 (שעון ישראל) כל 10 דקות בודקים מה עוד לא עודכן היום: מיקום מדויק (Serper) ונתוני Search Console.
+# אחרי שהכול עודכן, הריצות הבאות לא עושות כלום עד מחר.
 [triggers]
 crons = ["*/10 * * * *"]
 
@@ -13,5 +13,6 @@ database_name = "hodigital-ranks"
 database_id = "19c738e1-b4de-4c70-bfab-288b62a2d474"
 
 # סודות (מוגדרים ב-Cloudflare, לא בקוד):
-#   GSC_SERVICE_ACCOUNT – כל התוכן של קובץ ה-JSON של ה-Service Account מ-Google Cloud
+#   SERPER_API_KEY      – המפתח מ-serper.dev (מיקום מדויק בגוגל ישראל)
+#   GSC_SERVICE_ACCOUNT – כל התוכן של קובץ ה-JSON של ה-Service Account מ-Google Cloud (קליקים וחשיפות, לא חובה)
 #   DASHBOARD_PASSWORD  – הסיסמה לדשבורד

@@ -115,6 +115,22 @@ svg.spark{display:block}
 .msg.err{color:var(--down)}
 .domain{direction:ltr}
 
+.tabs{display:flex;gap:6px}
+.tab{background:transparent;border-color:transparent;color:var(--muted);font-weight:500}
+.tab[aria-current="page"]{background:var(--panel-2);border-color:var(--line);color:var(--text)}
+.ov-table{min-width:920px}
+.ov-table tbody tr{cursor:pointer}
+.ov-client{display:flex;align-items:center;gap:10px;min-width:220px}
+.ov-client img{width:20px;height:20px;border-radius:4px;background:#fff;flex:none}
+.ov-client .fav-fallback{width:20px;height:20px;border-radius:4px;background:var(--panel-2);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);flex:none}
+.ov-client b{display:block;font-weight:600}
+.ov-client span.d{display:block;color:var(--muted);font-size:12px;direction:ltr;text-align:right}
+.metric{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.metric .v{font-family:var(--mono);font-size:16px;font-weight:700;min-width:44px}
+.metric .v.none{color:var(--muted);font-weight:400}
+.warn-dot{color:var(--down);font-size:12px;margin-inline-start:6px}
+.ov-actions{display:flex;justify-content:flex-end;margin:0 0 12px}
+
 #report{display:none}
 
 @media print{
@@ -141,12 +157,41 @@ svg.spark{display:block}
   <div class="wrap">
     <header>
       <div class="brand">HO<span>DIGITAL</span> · מעקב ביטויים</div>
-      <div class="controls">
+      <nav class="tabs">
+        <button type="button" class="tab" id="tab-all">כל הלקוחות</button>
+        <button type="button" class="tab" id="tab-client">לקוח</button>
+      </nav>
+      <div class="controls" id="detail-controls">
         <select id="client" aria-label="בחירת לקוח"></select>
         <input id="search" type="search" placeholder="חיפוש ביטוי" aria-label="חיפוש ביטוי">
       </div>
     </header>
   </div>
+
+  <main class="wrap" id="overview-view" hidden>
+    <section class="kpis" id="ov-kpis"></section>
+    <div class="ov-actions"><button type="button" class="ghost" id="ov-add">+ לקוח חדש</button></div>
+    <div class="table-wrap">
+      <table class="ov-table">
+        <thead>
+          <tr>
+            <th data-ovsort="name">לקוח</th>
+            <th data-ovsort="visibility">נראות</th>
+            <th data-ovsort="top10">בטופ 10</th>
+            <th data-ovsort="avg">מיקום ממוצע</th>
+            <th data-ovsort="clicks">קליקים (30 יום)</th>
+            <th data-ovsort="keywords">ביטויים</th>
+            <th data-ovsort="moves">מהבדיקה הקודמת</th>
+          </tr>
+        </thead>
+        <tbody id="ov-rows"></tbody>
+      </table>
+      <div class="empty" id="ov-empty" hidden>עוד אין לקוחות. לוחצים "+ לקוח חדש" כדי להתחיל.</div>
+    </div>
+    <p class="hint">נראות = אחוז הקליקים המשוער שהאתר מקבל מכל הביטויים במעקב, לפי המיקום של כל ביטוי (100% = כולם במקום הראשון). השינויים הם מול לפני 7 ימים.</p>
+  </main>
+
+  <div id="detail-view">
   <div class="ticker" id="ticker" aria-hidden="true"><div class="ticker-track" id="ticker-track"></div></div>
   <main class="wrap">
     <div class="statusbar">
@@ -193,7 +238,7 @@ svg.spark{display:block}
           <button type="submit">הוספה</button>
           <span class="msg" id="kw-msg"></span>
         </div>
-        <p class="hint">ביטוי חדש יופיע עם היסטוריה של 90 יום בעדכון הקרוב (תוך 10 דקות), או מיד בלחיצה על "עדכון עכשיו". המיקום הוא המיקום הממוצע של האתר בגוגל לפי Search Console.</p>
+        <p class="hint">ביטוי חדש ייבדק בעדכון הקרוב (תוך 10 דקות), או מיד בלחיצה על "עדכון עכשיו". המיקום נבדק כל בוקר בגוגל ישראל, כמו בגלישה בסתר.</p>
       </form>
       <form id="client-form">
         <h2 id="client-form-title">לקוח חדש</h2>
@@ -212,13 +257,14 @@ svg.spark{display:block}
       </form>
     </section>
   </main>
+  </div>
 </div>
 <div id="report"></div>
 
 <script>
 const DEMO = new URLSearchParams(location.search).has('demo');
 const $ = (id) => document.getElementById(id);
-const state = { clients: [], client: null, data: { keywords: {} }, status: null, sort: { key: 'position', dir: 1 }, query: '', editing: false };
+const state = { view: 'all', overview: [], ovSort: { key: 'visibility', dir: 1 }, clients: [], client: null, data: { keywords: {} }, status: null, sort: { key: 'position', dir: 1 }, query: '', editing: false };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmtDate = (d) => d ? d.split('-').reverse().join('/') : '';
@@ -281,15 +327,22 @@ function sparkline(history) {
 
 const chip = (d) => `<span class="chg ${d.kind}">${d.text}</span>`;
 
+// מקור המיקום: הבדיקה היומית בגוגל (Serper) אם יש ללקוח נתונים כאלה, אחרת המיקום הממוצע מ-Search Console
+const useSerp = () => Object.keys(state.data.serp || {}).length > 0;
+const mainHist = (id) => (useSerp() ? state.data.serp[id] : state.data.keywords?.[id]) || [];
+const gscHist = (id) => state.data.keywords?.[id] || [];
+const noneLabel = () => useSerp() ? `לא בטופ ${state.status?.maxDepth || 50}` : 'אין חשיפות';
+
 function buildRows() {
   if (!state.client) return [];
-  const hist = state.data.keywords || {};
   return state.client.keywords.map(({ id, keyword }) => {
-    const h = hist[id] || [];
+    const h = mainHist(id);
     const cur = h[h.length - 1];
     const today = cur?.date;
     const ranked = h.filter((e) => e.position !== null);
-    const last30 = today ? h.filter((e) => e.date > shiftDate(today, -30)) : [];
+    const g = gscHist(id);
+    const gLast = g[g.length - 1]?.date;
+    const last30 = gLast ? g.filter((e) => e.date > shiftDate(gLast, -30)) : [];
     return {
       id, keyword, history: h, cur,
       clicks: last30.reduce((s, e) => s + (e.clicks || 0), 0),
@@ -316,16 +369,25 @@ function sortValue(r, key) {
 function renderStatus() {
   const s = state.status, c = state.client;
   if (!s) { $('status').textContent = ''; return; }
-  $('status').textContent = state.data.updated
-    ? `נתוני Search Console עד ${fmtDate(state.data.updated)} (גוגל מעדכנת באיחור של יומיים-שלושה)`
-    : '';
-  $('scan').disabled = !s.configured;
+  const parts = [];
+  if (s.serp) {
+    const { done, total, failed } = s.serp;
+    parts.push(total && done >= total
+      ? `המיקומים בגוגל נבדקו היום (${done} ביטויים)`
+      : `בדיקת המיקומים בגוגל: ${done} מתוך ${total} היום (מתחילה כל יום ב-0${s.syncHour}:00)`);
+    if (failed) parts.push(`<span class="warn">${failed} בדיקות נכשלו היום</span>`);
+  }
+  if (state.data.updated) parts.push(`קליקים וחשיפות מ-Search Console עד ${fmtDate(state.data.updated)}`);
+  $('status').innerHTML = parts.join(' · ');
+  $('scan').disabled = !s.configured && !s.serperConfigured;
 
   let notice = '';
-  if (!s.configured) {
-    notice = s.secretInvalid
-      ? 'הסוד GSC_SERVICE_ACCOUNT לא תקין. צריך להדביק בו את כל התוכן של קובץ ה-JSON שהורד מ-Google Cloud.'
-      : 'המערכת עוד לא מחוברת ל-Search Console: חסר הסוד GSC_SERVICE_ACCOUNT ב-Cloudflare.';
+  if (s.secretInvalid) {
+    notice = 'הסוד GSC_SERVICE_ACCOUNT לא תקין. צריך להדביק בו את כל התוכן של קובץ ה-JSON שהורד מ-Google Cloud.';
+  } else if (!s.configured && !s.serperConfigured) {
+    notice = 'המערכת עוד לא מחוברת: צריך להוסיף ב-Cloudflare את הסוד SERPER_API_KEY (מיקום מדויק בגוגל), ואם רוצים גם קליקים וחשיפות, את GSC_SERVICE_ACCOUNT.';
+  } else if (!s.configured) {
+    notice = '';
   } else if (c?.gsc_error === 'no_access') {
     notice = `אין גישה לאתר <b>${esc(c.domain)}</b> ב-Search Console. ב-Search Console של האתר: הגדרות ← משתמשים והרשאות ← הוספת משתמש, עם הכתובת <code>${esc(s.serviceAccountEmail)}</code> והרשאה מוגבלת. אחר כך לוחצים "עדכון עכשיו".`;
   } else if (c?.gsc_error) {
@@ -392,7 +454,7 @@ function render() {
   $('rows').innerHTML = shown.map((r) => `
     <tr>
       <td class="kw">${esc(r.keyword)}</td>
-      <td>${r.position !== null ? `<span class="pos">${fmtPos(r.position)}</span>` : `<span class="pos none">${r.cur ? 'אין חשיפות' : 'ממתין לנתונים'}</span>`}</td>
+      <td>${r.position !== null ? `<span class="pos">${fmtPos(r.position)}</span>` : `<span class="pos none">${r.cur ? noneLabel() : 'ממתין לנתונים'}</span>`}</td>
       <td>${chip(r.day)}</td>
       <td>${chip(r.week)}</td>
       <td>${chip(r.month)}</td>
@@ -433,15 +495,16 @@ function fillMonths() {
 function monthReport(ym) {
   const start = ym + '-01', end = ym + '-31';
   return state.client.keywords.map(({ id, keyword }) => {
-    const h = state.data.keywords?.[id] || [];
+    const h = mainHist(id);
     const inMonth = h.filter((e) => e.date >= start && e.date <= end);
     const first = entryAt(h, shiftDate(start, -1)) || inMonth[0];
     const last = inMonth[inMonth.length - 1];
     const ranked = inMonth.filter((e) => e.position !== null);
+    const gMonth = gscHist(id).filter((e) => e.date >= start && e.date <= end);
     return {
       keyword,
-      clicks: inMonth.reduce((s, e) => s + (e.clicks || 0), 0),
-      impressions: inMonth.reduce((s, e) => s + (e.impressions || 0), 0),
+      clicks: gMonth.reduce((s, e) => s + (e.clicks || 0), 0),
+      impressions: gMonth.reduce((s, e) => s + (e.impressions || 0), 0),
       start: first?.position ?? null,
       end: last?.position ?? null,
       change: last ? delta(first, last) : delta(undefined),
@@ -454,7 +517,7 @@ function monthReport(ym) {
 
 function exportCsv() {
   const ym = $('month').value;
-  const out = (p) => p !== null ? fmtPos(p) : 'אין חשיפות';
+  const out = (p) => p !== null ? fmtPos(p) : noneLabel();
   const lines = [['ביטוי', 'מיקום בתחילת החודש', 'מיקום בסוף החודש', 'שינוי', 'המיקום הטוב ביותר בחודש', 'קליקים', 'חשיפות', 'דף נחיתה']];
   monthReport(ym).filter((r) => r.scanned).forEach((r) => {
     const change = r.change.kind === 'flat' ? '0' : r.change.text.replace('▲ ', '+').replace('▼ ', '-');
@@ -474,7 +537,7 @@ function printReport() {
   const clicks = rows.reduce((s, r) => s + r.clicks, 0);
   const ups = rows.filter((r) => r.change.kind === 'up').length;
   const top10 = rows.filter((r) => r.end !== null && r.end <= 10).length;
-  const out = (p) => p !== null ? fmtPos(p) : '<span style="color:#5f5a69">אין חשיפות</span>';
+  const out = (p) => p !== null ? fmtPos(p) : `<span style="color:#5f5a69">${noneLabel()}</span>`;
   $('report').innerHTML = `
     <h1>דוח מיקומים בגוגל · ${esc(state.client.name)}</h1>
     <div class="sub">${monthName(ym)} · ${esc(state.client.domain)}</div>
@@ -488,11 +551,115 @@ function printReport() {
       <thead><tr><th>ביטוי</th><th>תחילת החודש</th><th>סוף החודש</th><th>שינוי</th><th>שיא החודש</th><th>קליקים</th><th>חשיפות</th><th>דף נחיתה</th></tr></thead>
       <tbody>${rows.map((r) => `<tr><td class="kw">${esc(r.keyword)}</td><td>${out(r.start)}</td><td><b>${out(r.end)}</b></td><td>${chip(r.change)}</td><td>${r.best !== null ? fmtPos(r.best) : '—'}</td><td>${fmtNum(r.clicks)}</td><td>${fmtNum(r.impressions)}</td><td class="lp">${r.url ? esc(prettyUrl(r.url)) : '—'}</td></tr>`).join('')}</tbody>
     </table>
-    <footer>מקור הנתונים: Google Search Console (מיקום ממוצע). הופק על ידי HODIGITAL · הודיה ארנטרוי · 054-725-3007</footer>`;
+    <footer>${useSerp() ? 'מיקום: בדיקה יומית בגוגל ישראל. קליקים וחשיפות: Google Search Console.' : 'מקור הנתונים: Google Search Console (מיקום ממוצע).'} הופק על ידי HODIGITAL · הודיה ארנטרוי · 054-725-3007</footer>`;
   const prevTitle = document.title;
   document.title = `דוח מיקומים - ${state.client.name} - ${monthName(ym)}`;
   window.print();
   document.title = prevTitle;
+}
+
+// ---------- מסך כל הלקוחות ----------
+
+function miniSpark(values, lowerIsBetter) {
+  const pts = values.map((v, i) => [i, v]).filter(([, v]) => v !== null && v !== undefined);
+  const w = 64, h = 22, pad = 2;
+  if (pts.length < 2) return '';
+  const vals = pts.map(([, v]) => v);
+  let min = Math.min(...vals), max = Math.max(...vals);
+  if (min === max) { min -= 1; max += 1; }
+  const x = (i) => w - pad - (i * (w - 2 * pad)) / (values.length - 1); // RTL: היום בצד שמאל
+  const y = (v) => {
+    const t = (v - min) / (max - min);
+    return pad + (lowerIsBetter ? t : 1 - t) * (h - 2 * pad);
+  };
+  const first = vals[0], last = vals[vals.length - 1];
+  const better = lowerIsBetter ? last < first : last > first;
+  const color = first === last ? 'var(--flat)' : better ? 'var(--up)' : 'var(--down)';
+  const d = pts.map(([i, v], n) => (n ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join('');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${d}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+// שינוי מול לפני 7 ימים. lowerIsBetter למיקום ממוצע (מספר קטן יותר = טוב יותר)
+function changeChip(cur, prev, { lowerIsBetter = false, suffix = '', digits = 1 } = {}) {
+  if (cur === null || cur === undefined || prev === null || prev === undefined) return '';
+  const diff = Math.round((cur - prev) * 10 ** digits) / 10 ** digits;
+  if (!diff) return '<span class="chg flat">0</span>';
+  const good = lowerIsBetter ? diff < 0 : diff > 0;
+  const n = Math.abs(diff);
+  // החץ מראה שיפור (▲) או הרעה (▼), כמו בשאר המערכת, גם כשבמיקום ממוצע המספר קטן
+  return `<span class="chg ${good ? 'up' : 'down'}">${good ? '▲' : '▼'} ${digits ? fmtPos(n) : n}${suffix}</span>`;
+}
+
+function overviewRow(c) {
+  const sr = c.series;
+  const cur = sr[sr.length - 1];
+  const prev = cur ? entryAt(sr, shiftDate(cur.date, -7)) : undefined;
+  const host = c.domain.split('/')[0];
+  const clicksPct = c.clicksPrev30 ? Math.round(((c.clicks30 - c.clicksPrev30) / c.clicksPrev30) * 100) : null;
+  return {
+    c, cur, prev, host, clicksPct,
+    visibility: cur?.visibility ?? -1,
+    top10: cur?.top10 ?? -1,
+    avg: cur?.avg ?? 999,
+    clicks: c.clicks30 ?? -1,
+    moves: c.up - c.down,
+  };
+}
+
+function renderOverview() {
+  const list = state.overview || [];
+  const rows = list.map(overviewRow);
+  const { key, dir } = state.ovSort;
+  rows.sort((a, b) => key === 'name'
+    ? a.c.name.localeCompare(b.c.name, 'he') * dir
+    : ((key === 'avg' ? a[key] - b[key] : b[key] - a[key]) || a.c.name.localeCompare(b.c.name, 'he')) * dir);
+
+  const withData = rows.filter((r) => r.cur);
+  const avgVis = withData.length ? (withData.reduce((s, r) => s + r.cur.visibility, 0) / withData.length).toFixed(1) + '%' : '—';
+  $('ov-kpis').innerHTML = [
+    ['לקוחות', list.length, ''],
+    ['ביטויים במעקב', fmtNum(list.reduce((s, c) => s + c.keywords, 0)), ''],
+    ['נראות ממוצעת', avgVis, ''],
+    ['ביטויים בטופ 10', fmtNum(withData.reduce((s, r) => s + r.cur.top10, 0)), ''],
+    ['עלו מהבדיקה הקודמת', fmtNum(list.reduce((s, c) => s + c.up, 0)), 'up'],
+    ['ירדו מהבדיקה הקודמת', fmtNum(list.reduce((s, c) => s + c.down, 0)), 'down'],
+  ].map(([l, v, cl]) => `<div class="kpi ${cl}"><div class="label">${l}</div><div class="value">${v}</div></div>`).join('');
+
+  const metric = (value, spark, chip, none) => `<div class="metric"><span class="v${none ? ' none' : ''}">${value}</span>${spark}${chip}</div>`;
+  $('ov-rows').innerHTML = rows.map((r) => {
+    const sr = r.c.series, cur = r.cur, prev = r.prev;
+    return `<tr data-client="${r.c.id}" tabindex="0">
+      <td><div class="ov-client">
+        <img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(r.host)}&sz=32" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;fav-fallback&quot;>${esc(r.c.name.slice(0, 1))}</span>'">
+        <div><b>${esc(r.c.name)}${r.c.gscError ? '<span class="warn-dot" title="אין גישה ל-Search Console">●</span>' : ''}</b><span class="d">${esc(r.c.domain)}</span></div>
+      </div></td>
+      <td>${cur ? metric(cur.visibility.toFixed(cur.visibility < 10 ? 2 : 1) + '%', miniSpark(sr.map((e) => e.visibility)), changeChip(cur.visibility, prev?.visibility, { suffix: '%', digits: 2 })) : metric('—', '', '', true)}</td>
+      <td>${cur ? metric(cur.top10, miniSpark(sr.map((e) => e.top10)), changeChip(cur.top10, prev?.top10, { digits: 0 })) : metric('—', '', '', true)}</td>
+      <td>${cur && cur.avg !== null ? metric(fmtPos(cur.avg), miniSpark(sr.map((e) => e.avg), true), changeChip(cur.avg, prev?.avg, { lowerIsBetter: true })) : metric(cur ? '&gt;' + (state.status?.maxDepth || 50) : '—', '', '', true)}</td>
+      <td>${r.c.clicks30 !== null ? metric(fmtNum(r.c.clicks30), '', r.clicksPct !== null ? changeChip(r.clicksPct, 0, { suffix: '%', digits: 0 }) : '') : metric('—', '', '', true)}</td>
+      <td class="num">${fmtNum(r.c.keywords)}</td>
+      <td><div class="metric">${r.c.up ? `<span class="chg up">▲ ${r.c.up}</span>` : ''}${r.c.down ? `<span class="chg down">▼ ${r.c.down}</span>` : ''}${!r.c.up && !r.c.down ? '<span class="chg flat">—</span>' : ''}</div></td>
+    </tr>`;
+  }).join('');
+  $('ov-empty').hidden = list.length > 0;
+  document.querySelectorAll('th[data-ovsort]').forEach((th) => {
+    th.setAttribute('aria-sort', th.dataset.ovsort === key ? (dir === 1 ? 'ascending' : 'descending') : 'none');
+  });
+}
+
+function showView(view, clientId) {
+  state.view = view;
+  $('overview-view').hidden = view !== 'all';
+  $('detail-view').hidden = view === 'all';
+  $('detail-controls').hidden = view === 'all';
+  $('tab-all').setAttribute('aria-current', view === 'all' ? 'page' : 'false');
+  $('tab-client').setAttribute('aria-current', view === 'all' ? 'false' : 'page');
+  $('tab-client').textContent = state.client && view !== 'all' ? state.client.name : 'לקוח';
+  const hash = view === 'all' ? '#all' : `#client-${clientId ?? state.client?.id ?? ''}`;
+  if (location.hash !== hash) history.replaceState(null, '', hash);
+  if (view === 'all') {
+    call('GET', '/api/overview').then((o) => { state.overview = o; renderOverview(); }).catch(() => {});
+  }
 }
 
 // ---------- טעינה ----------
@@ -537,7 +704,18 @@ function setEditing(on) {
 }
 
 function init() {
-  $('client').addEventListener('change', (e) => { setEditing(false); loadClient(e.target.value); });
+  $('client').addEventListener('change', (e) => { setEditing(false); loadClient(e.target.value).then(() => showView('client')); });
+  $('tab-all').addEventListener('click', () => showView('all'));
+  $('tab-client').addEventListener('click', () => showView('client'));
+  $('ov-add').addEventListener('click', () => { setEditing(false); showView('client'); $('c-name').scrollIntoView({ block: 'center' }); $('c-name').focus(); });
+  const openClient = (tr) => { $('client').value = tr.dataset.client; setEditing(false); loadClient(tr.dataset.client).then(() => { showView('client'); scrollTo(0, 0); }); };
+  $('ov-rows').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-client]'); if (tr) openClient(tr); });
+  $('ov-rows').addEventListener('keydown', (e) => { const tr = e.target.closest('tr[data-client]'); if (tr && e.key === 'Enter') openClient(tr); });
+  document.querySelectorAll('th[data-ovsort]').forEach((th) => th.addEventListener('click', () => {
+    const key = th.dataset.ovsort;
+    state.ovSort = { key, dir: state.ovSort.key === key ? -state.ovSort.dir : 1 };
+    renderOverview();
+  }));
   $('search').addEventListener('input', (e) => { state.query = e.target.value.trim(); render(); });
   document.querySelectorAll('th[data-sort]').forEach((th) => th.addEventListener('click', () => {
     const key = th.dataset.sort;
@@ -607,7 +785,10 @@ function init() {
     await loadClients();
   });
 
-  loadClients().catch((err) => { $('empty').hidden = false; $('empty').textContent = 'שגיאה בטעינה: ' + err.message; });
+  const m = location.hash.match(/^#client-(\d+)/);
+  loadClients(m ? m[1] : undefined)
+    .then(() => showView(m ? 'client' : 'all'))
+    .catch((err) => { showView('client'); $('empty').hidden = false; $('empty').textContent = 'שגיאה בטעינה: ' + err.message; });
 }
 
 // ---------- מצב הדגמה (?demo=1): נתונים מומצאים, בלי שרת ----------
@@ -633,16 +814,41 @@ function demoApi(method, path, body) {
   }
   let m;
   if (path === '/api/clients' && method === 'GET') return structuredClone(demo.clients);
+  if (path === '/api/overview') {
+    const CTR = [0, 31.7, 24.7, 18.7, 13.6, 9.5, 6.2, 4.2, 3.1, 3.0, 2.5];
+    const ctr = (p) => p === null ? 0 : p <= 10 ? CTR[Math.max(1, Math.round(p))] : p <= 20 ? 1 : 0;
+    return demo.clients.map((c, ci) => {
+      const hs = c.keywords.map((k) => demo.rankings[k.id].map((e) => ({ ...e, position: e.position && Math.round(e.position) })));
+      const series = hs[0].slice(-31).map((e, i, arr) => {
+        const idx = hs[0].length - arr.length + i;
+        const ps = hs.map((h) => h[idx].position);
+        const ranked = ps.filter((p) => p !== null);
+        return {
+          date: e.date,
+          visibility: Math.round((ps.reduce((s, p) => s + ctr(p), 0) / (ps.length * 31.7)) * 1000) / 10,
+          top3: ranked.filter((p) => p <= 3).length,
+          top10: ranked.filter((p) => p <= 10).length,
+          avg: ranked.length ? Math.round((ranked.reduce((a, b) => a + b, 0) / ranked.length) * 10) / 10 : null,
+        };
+      });
+      const sumClicks = (from, to) => c.keywords.reduce((s, k) => s + demo.rankings[k.id].slice(from, to).reduce((a, e) => a + e.clicks, 0), 0);
+      return { id: c.id, name: c.name, domain: c.domain, gscError: null, keywords: c.keywords.length, source: 'serp', series,
+        clicks30: sumClicks(-30), clicksPrev30: sumClicks(-60, -30), up: ci + 1, down: 1 };
+    });
+  }
   if (path === '/api/reports') return [
     { id: 2, created_at: new Date().toISOString().slice(0, 19).replace('T', ' '), status: 'ok', summary: 'כל 2 הלקוחות עודכנו היום, הנתונים מ-Search Console עדכניים.\nבולט: "מסעדת שף בצפון" עלה 3 מקומות השבוע.' },
     { id: 1, created_at: new Date(Date.now() - 864e5).toISOString().slice(0, 19).replace('T', ' '), status: 'ok', summary: 'כל 2 הלקוחות עודכנו היום.' },
   ];
-  if (path === '/api/status') return { today: '', configured: true, serviceAccountEmail: 'demo@example.iam.gserviceaccount.com' };
+  if (path === '/api/status') return { today: '', syncHour: 7, maxDepth: 50, serperConfigured: true, serp: { total: 6, done: 6, failed: 0 }, configured: true, serviceAccountEmail: 'demo@example.iam.gserviceaccount.com' };
   if ((m = path.match(/\/api\/clients\/(\d+)\/rankings/))) {
     const c = demo.clients.find((c) => c.id === Number(m[1]));
-    const keywords = {};
-    c.keywords.forEach((k) => { keywords[k.id] = demo.rankings[k.id] || []; });
-    return { updated: new Date().toISOString().slice(0, 10), keywords };
+    const keywords = {}, serp = {};
+    c.keywords.forEach((k) => {
+      keywords[k.id] = demo.rankings[k.id] || [];
+      serp[k.id] = keywords[k.id].map((e) => ({ date: e.date, position: e.position && Math.round(e.position), url: e.url }));
+    });
+    return { updated: shiftDate(new Date().toISOString().slice(0, 10), -3), keywords, serp, serpUpdated: new Date().toISOString().slice(0, 10) };
   }
   throw new Error('במצב הדגמה אי אפשר לשנות נתונים');
 }

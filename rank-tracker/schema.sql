@@ -35,3 +35,12 @@ CREATE TABLE IF NOT EXISTS reports (
   status TEXT NOT NULL CHECK (status IN ('ok', 'warn', 'error')),
   summary TEXT NOT NULL
 );
+
+-- המיקום המדויק בגוגל ישראל, נבדק כל בוקר דרך Serper (position ריק = לא נמצא עד מקום 50)
+CREATE TABLE IF NOT EXISTS serp (
+  keyword_id INTEGER NOT NULL REFERENCES keywords(id) ON DELETE CASCADE,
+  date TEXT NOT NULL,
+  position INTEGER,
+  url TEXT,
+  PRIMARY KEY (keyword_id, date)
+);

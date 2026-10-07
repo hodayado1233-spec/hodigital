@@ -12,7 +12,15 @@ const ROW_LIMIT = 25000;
 
 const GSC_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly';
 
+// בדיקת המיקום המדויק בגוגל (Serper): עד איזה מקום בודקים, ו-10 תוצאות בכל עמוד
+const MAX_DEPTH = 50;
+const PAGE_SIZE = 10;
+const MAX_FAILS_PER_DAY = 3;
+// השעה (שעון ישראל) שבה מתחיל העדכון היומי
+const SYNC_HOUR = 7;
+
 const todayIL = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date());
+const hourIL = () => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
 
 function shiftDate(date, days) {
   const d = new Date(date + 'T12:00:00Z');
@@ -26,6 +34,76 @@ function normalize(url) {
 
 // Search Console שומר את השאילתות באותיות קטנות ועם רווח אחד בין מילים
 export const normalizeKeyword = (k) => String(k).trim().toLowerCase().replace(/\s+/g, ' ');
+
+// ---------- מיקום מדויק בגוגל ישראל (Serper) ----------
+
+// target יכול להיות דומיין ("example.co.il") או דומיין עם נתיב ("user.github.io/site")
+export function matchesTarget(url, target) {
+  const u = normalize(url);
+  const t = normalize(target);
+  if (u === t || u.startsWith(t + '/')) return true;
+  if (!t.includes('/')) return u.split('/')[0].endsWith('.' + t);
+  return false;
+}
+
+async function serperPage(env, keyword, page, spend) {
+  spend();
+  const res = await fetch(env.SERPER_URL || 'https://google.serper.dev/search', {
+    method: 'POST',
+    headers: { 'X-API-KEY': env.SERPER_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ q: keyword, gl: 'il', hl: 'iw', num: PAGE_SIZE, page }),
+  });
+  if (!res.ok) throw new Error(`Serper ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const json = await res.json();
+  return (json.organic || []).map((r) => r.link).filter(Boolean);
+}
+
+// עוברת עמוד אחרי עמוד עד שהדומיין נמצא, כך שביטוי שמדורג בעמוד הראשון עולה בדיקה אחת בלבד
+async function serpPosition(env, keyword, domain, spend) {
+  let seen = 0;
+  for (let page = 1; seen < MAX_DEPTH; page++) {
+    const links = await serperPage(env, keyword, page, spend);
+    for (const link of links) {
+      seen++;
+      if (seen > MAX_DEPTH) break;
+      if (matchesTarget(link, domain)) return { position: seen, url: link };
+    }
+    if (links.length === 0) break;
+  }
+  return { position: null, url: null };
+}
+
+async function runSerp(env, today, spend, budgetLeft) {
+  const { results: pending } = await env.DB.prepare(
+    `SELECT k.id, k.keyword, k.fail_date, k.fail_count, c.domain
+       FROM keywords k JOIN clients c ON c.id = k.client_id
+      WHERE NOT EXISTS (SELECT 1 FROM serp s WHERE s.keyword_id = k.id AND s.date = ?1)
+        AND NOT (k.fail_date = ?1 AND k.fail_count >= ?2)
+      ORDER BY k.id LIMIT 50`
+  ).bind(today, MAX_FAILS_PER_DAY).all();
+
+  const writes = [];
+  let checked = 0, failed = 0;
+  for (const k of pending) {
+    // מתחילים ביטוי רק אם נשאר מספיק תקציב לבדוק אותו עד הסוף
+    if (budgetLeft() < MAX_DEPTH / PAGE_SIZE) break;
+    try {
+      const r = await serpPosition(env, k.keyword, k.domain, spend);
+      writes.push(env.DB.prepare('INSERT OR REPLACE INTO serp (keyword_id, date, position, url) VALUES (?, ?, ?, ?)')
+        .bind(k.id, today, r.position, r.url));
+      checked++;
+    } catch (err) {
+      if (err.budget) break;
+      // לא רושמים מיקום כשהבדיקה נכשלה, כדי שלא תופיע "נפילה" שלא קרתה. ננסה שוב בריצה הבאה.
+      const count = k.fail_date === today ? k.fail_count + 1 : 1;
+      writes.push(env.DB.prepare('UPDATE keywords SET fail_date = ?, fail_count = ? WHERE id = ?').bind(today, count, k.id));
+      failed++;
+      console.error(`serp ${k.keyword}: ${err.message}`);
+    }
+  }
+  if (writes.length) await env.DB.batch(writes);
+  return { checked, failed };
+}
 
 // ---------- התחברות ל-Google עם Service Account ----------
 
@@ -163,16 +241,24 @@ async function saveRows(env, rows) {
   if (stmts.length) await env.DB.batch(stmts);
 }
 
+// הריצה התקופתית: מ-07:00 בכל יום בודקת מה עוד לא עודכן היום, ומעדכנת עד שנגמר התקציב של הריצה
 export async function runBatch(env, { force = false } = {}) {
-  const sa = serviceAccount(env);
-  if (!sa) return { updated: 0, error: 'חסר GSC_SERVICE_ACCOUNT' };
+  if (!force && hourIL() < SYNC_HOUR) return { skipped: 'before sync hour' };
   const today = todayIL();
   let budget = FETCH_BUDGET;
   const spend = () => {
     if (budget <= 0) throw Object.assign(new Error('budget'), { budget: true });
     budget--;
   };
+  const result = {};
+  const sa = serviceAccount(env);
+  if (sa) result.gsc = await runGsc(env, sa, today, force, spend, () => budget);
+  if (env.SERPER_API_KEY) result.serp = await runSerp(env, today, spend, () => budget);
+  if (!sa && !env.SERPER_API_KEY) result.error = 'לא הוגדרו SERPER_API_KEY או GSC_SERVICE_ACCOUNT';
+  return result;
+}
 
+async function runGsc(env, sa, today, force, spend, budgetLeft) {
   const [{ results: clients }, { results: keywords }] = await env.DB.batch([
     env.DB.prepare(`SELECT id, name, domain, gsc_property, backfilled, fetched_on FROM clients
                      WHERE ?1 OR fetched_on IS NULL OR fetched_on < ?2 ORDER BY backfilled, id`).bind(force ? 1 : 0, today),
@@ -206,7 +292,7 @@ export async function runBatch(env, { force = false } = {}) {
         continue;
       }
       // צריך לפחות 3 בקשות לכל קבוצת ביטויים, אז לא מתחילים לקוח בלי מספיק תקציב
-      if (budget < 1 + 2 * Math.ceil(kws.length / KEYWORDS_PER_QUERY)) break;
+      if (budgetLeft() < 1 + 2 * Math.ceil(kws.length / KEYWORDS_PER_QUERY)) break;
       const start = shiftDate(today, client.backfilled ? -REFRESH_DAYS : -BACKFILL_DAYS);
       const { rows } = await fetchClient(env, token, client, kws, start, shiftDate(today, -1), spend);
       await saveRows(env, rows);
@@ -260,13 +346,103 @@ async function clientRankings(env, clientId) {
     (keywords[r.keyword_id] ||= []).push({ date: r.date, position: r.position, url: r.url, clicks: r.clicks || 0, impressions: r.impressions || 0 });
     if (!updated || r.date > updated) updated = r.date;
   }
-  return { updated, keywords };
+  const { results: serpRows } = await env.DB.prepare(
+    `SELECT k.id AS keyword_id, s.date, s.position, s.url
+       FROM serp s JOIN keywords k ON k.id = s.keyword_id
+      WHERE k.client_id = ? ORDER BY s.date`
+  ).bind(clientId).all();
+  const serp = {};
+  let serpUpdated = null;
+  for (const r of serpRows) {
+    (serp[r.keyword_id] ||= []).push({ date: r.date, position: r.position, url: r.url });
+    if (!serpUpdated || r.date > serpUpdated) serpUpdated = r.date;
+  }
+  return { updated, keywords, serp, serpUpdated };
+}
+
+// אחוז הקליקים המשוער לכל מיקום בגוגל (ממוצעים מקובלים בתעשייה), לחישוב "נראות"
+const CTR_SQL = `CASE
+  WHEN p IS NULL THEN 0 WHEN p <= 1 THEN 31.7 WHEN p <= 2 THEN 24.7 WHEN p <= 3 THEN 18.7
+  WHEN p <= 4 THEN 13.6 WHEN p <= 5 THEN 9.5 WHEN p <= 6 THEN 6.2 WHEN p <= 7 THEN 4.2
+  WHEN p <= 8 THEN 3.1 WHEN p <= 9 THEN 3.0 WHEN p <= 10 THEN 2.5 WHEN p <= 20 THEN 1.0 ELSE 0 END`;
+const MAX_CTR = 31.7;
+const OVERVIEW_DAYS = 31;
+
+// סיכום יומי לכל לקוח: נראות, ביטויים בטופ 3/10, מיקום ממוצע, עלו/ירדו, קליקים
+async function overview(env) {
+  const since = shiftDate(todayIL(), -OVERVIEW_DAYS);
+  const agg = (table) => env.DB.prepare(
+    `SELECT client_id, date, COUNT(*) AS n, COUNT(p) AS ranked, AVG(p) AS avg,
+            SUM(p <= 3) AS top3, SUM(p <= 10) AS top10, SUM(${CTR_SQL}) AS ctr
+       FROM (SELECT k.client_id, t.date, ROUND(t.position) AS p FROM ${table} t JOIN keywords k ON k.id = t.keyword_id WHERE t.date >= ?)
+      GROUP BY client_id, date ORDER BY date`
+  ).bind(since);
+  const [{ results: clients }, { results: kwCounts }, { results: serpDays }, { results: gscDays }, { results: clickDays }] = await env.DB.batch([
+    env.DB.prepare('SELECT id, name, domain, gsc_error FROM clients ORDER BY name'),
+    env.DB.prepare('SELECT client_id, COUNT(*) AS n FROM keywords GROUP BY client_id'),
+    agg('serp'),
+    agg('rankings'),
+    env.DB.prepare(
+      `SELECT k.client_id, r.date, SUM(r.clicks) AS clicks, SUM(r.impressions) AS impressions
+         FROM rankings r JOIN keywords k ON k.id = r.keyword_id WHERE r.date >= ? GROUP BY 1, 2 ORDER BY 2`
+    ).bind(shiftDate(todayIL(), -64)),
+  ]);
+
+  // שינוי יומי לכל ביטוי (מול הבדיקה הקודמת), לספירת עלו/ירדו
+  const { results: moves } = await env.DB.prepare(
+    `WITH last AS (
+       SELECT k.client_id, s.keyword_id, s.position,
+              LAG(s.position) OVER (PARTITION BY s.keyword_id ORDER BY s.date) AS prev,
+              LAG(s.date) OVER (PARTITION BY s.keyword_id ORDER BY s.date) AS prev_date,
+              ROW_NUMBER() OVER (PARTITION BY s.keyword_id ORDER BY s.date DESC) AS rn
+         FROM serp s JOIN keywords k ON k.id = s.keyword_id WHERE s.date >= ?)
+     SELECT client_id,
+            SUM(CASE WHEN position IS NOT NULL AND (prev IS NULL OR position < prev) THEN 1 ELSE 0 END) AS up,
+            SUM(CASE WHEN prev IS NOT NULL AND (position IS NULL OR position > prev) THEN 1 ELSE 0 END) AS down
+       FROM last WHERE rn = 1 AND prev_date IS NOT NULL GROUP BY client_id`
+  ).bind(shiftDate(todayIL(), -7)).all();
+
+  const series = (rows, id) => rows.filter((r) => r.client_id === id).map((r) => ({
+    date: r.date,
+    visibility: r.n ? Math.round((r.ctr / (r.n * MAX_CTR)) * 1000) / 10 : 0,
+    top3: r.top3 || 0,
+    top10: r.top10 || 0,
+    avg: r.avg === null ? null : Math.round(r.avg * 10) / 10,
+  }));
+  return clients.map((c) => {
+    const serp = series(serpDays, c.id);
+    const clicks = clickDays.filter((r) => r.client_id === c.id);
+    const lastClick = clicks[clicks.length - 1]?.date;
+    const sum = (from, to) => clicks.filter((r) => r.date > from && r.date <= to).reduce((a, r) => a + r.clicks, 0);
+    const m = moves.find((r) => r.client_id === c.id);
+    return {
+      id: c.id, name: c.name, domain: c.domain, gscError: c.gsc_error,
+      keywords: kwCounts.find((r) => r.client_id === c.id)?.n || 0,
+      source: serp.length ? 'serp' : 'gsc',
+      series: serp.length ? serp : series(gscDays, c.id),
+      clicks30: lastClick ? sum(shiftDate(lastClick, -30), lastClick) : null,
+      clicksPrev30: lastClick ? sum(shiftDate(lastClick, -60), shiftDate(lastClick, -30)) : null,
+      up: m?.up || 0,
+      down: m?.down || 0,
+    };
+  });
 }
 
 async function status(env) {
   const sa = serviceAccount(env);
+  const today = todayIL();
+  const serp = env.SERPER_API_KEY ? await env.DB.prepare(
+    `SELECT (SELECT COUNT(*) FROM keywords) AS total,
+            (SELECT COUNT(*) FROM serp WHERE date = ?1) AS done,
+            (SELECT COUNT(*) FROM keywords WHERE fail_date = ?1 AND fail_count >= ?2
+               AND id NOT IN (SELECT keyword_id FROM serp WHERE date = ?1)) AS failed`
+  ).bind(today, MAX_FAILS_PER_DAY).first() : null;
   return {
-    today: todayIL(),
+    today,
+    syncHour: SYNC_HOUR,
+    maxDepth: MAX_DEPTH,
+    serperConfigured: !!env.SERPER_API_KEY,
+    serp,
     configured: !!sa,
     serviceAccountEmail: sa?.client_email || null,
     secretInvalid: !!env.GSC_SERVICE_ACCOUNT && !sa,
@@ -280,6 +456,7 @@ async function api(request, env, path) {
   if (path === '/api/status' && method === 'GET') return json(await status(env));
   if (path === '/api/scan' && method === 'POST') return json(await runBatch(env, { force: true }));
   if (path === '/api/clients' && method === 'GET') return json(await listClients(env));
+  if (path === '/api/overview' && method === 'GET') return json(await overview(env));
   if (path === '/api/reports' && method === 'GET') {
     const { results } = await env.DB.prepare('SELECT id, created_at, status, summary FROM reports ORDER BY id DESC LIMIT 14').all();
     return json(results);
@@ -312,6 +489,7 @@ async function api(request, env, path) {
     if (method === 'DELETE') {
       await env.DB.batch([
         env.DB.prepare('DELETE FROM rankings WHERE keyword_id IN (SELECT id FROM keywords WHERE client_id = ?)').bind(id),
+        env.DB.prepare('DELETE FROM serp WHERE keyword_id IN (SELECT id FROM keywords WHERE client_id = ?)').bind(id),
         env.DB.prepare('DELETE FROM keywords WHERE client_id = ?').bind(id),
         env.DB.prepare('DELETE FROM clients WHERE id = ?').bind(id),
       ]);
@@ -341,6 +519,7 @@ async function api(request, env, path) {
     const id = Number(m[1]);
     await env.DB.batch([
       env.DB.prepare('DELETE FROM rankings WHERE keyword_id = ?').bind(id),
+      env.DB.prepare('DELETE FROM serp WHERE keyword_id = ?').bind(id),
       env.DB.prepare('DELETE FROM keywords WHERE id = ?').bind(id),
     ]);
     return json({ ok: true });
@@ -387,6 +566,6 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runBatch(env).then((r) => console.log('gsc batch', JSON.stringify(r))));
+    ctx.waitUntil(runBatch(env).then((r) => console.log('batch', JSON.stringify(r))));
   },
 };
