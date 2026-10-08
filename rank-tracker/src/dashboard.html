@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>מעקב ביטויים | HODIGITAL</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" href="/icon-192.png">
+<meta name="theme-color" content="#0c0a10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="מעקב ביטויים">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -28,7 +36,7 @@
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:var(--ink);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5}
+body{margin:0;padding-top:env(safe-area-inset-top);background:var(--ink);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.5}
 a{color:var(--uv)}
 .wrap{max-width:1200px;margin:0 auto;padding:0 16px}
 
@@ -132,6 +140,18 @@ svg.spark{display:block}
 .metric .v.none{color:var(--muted);font-weight:400}
 .warn-dot{color:var(--down);font-size:12px;margin-inline-start:6px}
 .ov-actions{display:flex;justify-content:flex-end;margin:0 0 12px}
+/* בטלפון: כל לקוח ככרטיס במקום שורה בטבלה רחבה */
+@media (max-width:700px){
+  .ov-table{min-width:0}
+  .ov-table thead{display:none}
+  .ov-table,.ov-table tbody,.ov-table tr,.ov-table td{display:block}
+  .ov-table tr{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;padding:14px;border-bottom:1px solid var(--line)}
+  .ov-table td{border:0;padding:0}
+  .ov-table td:first-child{grid-column:1 / -1}
+  .ov-table td[data-label]::before{content:attr(data-label);display:block;color:var(--muted);font-size:11px;margin-bottom:2px}
+  .metric{flex-wrap:wrap;gap:4px 6px}
+  .metric svg{display:none}
+}
 
 #report{display:none}
 
@@ -278,6 +298,7 @@ const prettyUrl = (u) => { try { return decodeURI(u.replace(/^https?:\/\/(www\.)
 async function call(method, path, body) {
   if (DEMO) return demoApi(method, path, body);
   const res = await fetch(path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  if (res.status === 401) { location.href = '/login'; throw new Error('נדרשת כניסה'); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'שגיאה ' + res.status);
   return data;
@@ -636,12 +657,12 @@ function renderOverview() {
         <img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(r.host)}&sz=32" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;fav-fallback&quot;>${esc(r.c.name.slice(0, 1))}</span>'">
         <div><b>${esc(r.c.name)}${r.c.gscError ? '<span class="warn-dot" title="אין גישה ל-Search Console">●</span>' : ''}</b><span class="d">${esc(r.c.domain)}</span></div>
       </div></td>
-      <td>${cur ? metric(cur.visibility.toFixed(cur.visibility < 10 ? 2 : 1) + '%', miniSpark(sr.map((e) => e.visibility)), changeChip(cur.visibility, prev?.visibility, { suffix: '%', digits: 2 })) : metric('—', '', '', true)}</td>
-      <td>${cur ? metric(cur.top10, miniSpark(sr.map((e) => e.top10)), changeChip(cur.top10, prev?.top10, { digits: 0 })) : metric('—', '', '', true)}</td>
-      <td>${cur && cur.avg !== null ? metric(fmtPos(cur.avg), miniSpark(sr.map((e) => e.avg), true), changeChip(cur.avg, prev?.avg, { lowerIsBetter: true })) : metric(cur ? '&gt;' + (state.status?.maxDepth || 50) : '—', '', '', true)}</td>
-      <td>${r.c.clicks30 !== null ? metric(fmtNum(r.c.clicks30), '', r.clicksPct !== null ? changeChip(r.clicksPct, 0, { suffix: '%', digits: 0 }) : '') : metric('—', '', '', true)}</td>
-      <td class="num">${fmtNum(r.c.keywords)}</td>
-      <td><div class="metric">${r.c.up ? `<span class="chg up">▲ ${r.c.up}</span>` : ''}${r.c.down ? `<span class="chg down">▼ ${r.c.down}</span>` : ''}${!r.c.up && !r.c.down ? '<span class="chg flat">—</span>' : ''}</div></td>
+      <td data-label="נראות">${cur ? metric(cur.visibility.toFixed(cur.visibility < 10 ? 2 : 1) + '%', miniSpark(sr.map((e) => e.visibility)), changeChip(cur.visibility, prev?.visibility, { suffix: '%', digits: 2 })) : metric('—', '', '', true)}</td>
+      <td data-label="בטופ 10">${cur ? metric(cur.top10, miniSpark(sr.map((e) => e.top10)), changeChip(cur.top10, prev?.top10, { digits: 0 })) : metric('—', '', '', true)}</td>
+      <td data-label="מיקום ממוצע">${cur && cur.avg !== null ? metric(fmtPos(cur.avg), miniSpark(sr.map((e) => e.avg), true), changeChip(cur.avg, prev?.avg, { lowerIsBetter: true })) : metric(cur ? '&gt;' + (state.status?.maxDepth || 50) : '—', '', '', true)}</td>
+      <td data-label="קליקים (30 יום)">${r.c.clicks30 !== null ? metric(fmtNum(r.c.clicks30), '', r.clicksPct !== null ? changeChip(r.clicksPct, 0, { suffix: '%', digits: 0 }) : '') : metric('—', '', '', true)}</td>
+      <td class="num" data-label="ביטויים">${fmtNum(r.c.keywords)}</td>
+      <td data-label="מהבדיקה הקודמת"><div class="metric">${r.c.up ? `<span class="chg up">▲ ${r.c.up}</span>` : ''}${r.c.down ? `<span class="chg down">▼ ${r.c.down}</span>` : ''}${!r.c.up && !r.c.down ? '<span class="chg flat">—</span>' : ''}</div></td>
     </tr>`;
   }).join('');
   $('ov-empty').hidden = list.length > 0;

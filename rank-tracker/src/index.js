@@ -1,4 +1,5 @@
 import dashboard from './dashboard.html';
+import { ICON_180, ICON_192, ICON_512 } from './icons.js';
 
 // בתוכנית החינמית מותרות 50 בקשות יוצאות לכל הרצה, אז משאירים מרווח
 const FETCH_BUDGET = 40;
@@ -528,40 +529,121 @@ async function api(request, env, path) {
   return bad('לא נמצא', 404);
 }
 
-// ---------- סיסמה ----------
+// ---------- כניסה ----------
+// אחרי הזנת הסיסמה נשמרת עוגייה לשנה, כדי שבטלפון (גם כאפליקציה במסך הבית) לא יבקשו סיסמה בכל פתיחה.
+// ערך העוגייה נגזר מהסיסמה, כך ששינוי הסיסמה ב-Cloudflare מנתק את כל המכשירים.
 
-function authorized(request, env) {
+const COOKIE = 'rt_session';
+const SESSION_DAYS = 365;
+
+function safeEqual(a, b) {
+  const x = new TextEncoder().encode(a), y = new TextEncoder().encode(b);
+  if (x.length !== y.length) return false;
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+async function sessionToken(env) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.DASHBOARD_PASSWORD), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode('hodigital-ranks-session'));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function authorized(request, env) {
   if (!env.DASHBOARD_PASSWORD) return false;
+  const cookie = (request.headers.get('Cookie') || '').split(/;\s*/).find((c) => c.startsWith(COOKIE + '='));
+  if (cookie && safeEqual(cookie.slice(COOKIE.length + 1), await sessionToken(env))) return true;
+  // תמיכה גם בכניסה הישנה (חלון הסיסמה של הדפדפן)
   const header = request.headers.get('Authorization') || '';
   if (!header.startsWith('Basic ')) return false;
   let decoded;
   try { decoded = new TextDecoder().decode(Uint8Array.from(atob(header.slice(6)), (c) => c.charCodeAt(0))); } catch { return false; }
-  const password = decoded.slice(decoded.indexOf(':') + 1);
-  const a = new TextEncoder().encode(password), b = new TextEncoder().encode(env.DASHBOARD_PASSWORD);
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
-  return diff === 0;
+  return safeEqual(decoded.slice(decoded.indexOf(':') + 1), env.DASHBOARD_PASSWORD);
 }
+
+const loginPage = (error) => `<!DOCTYPE html>
+<html lang="he" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow"><title>כניסה | מעקב ביטויים</title>
+<link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/icon-180.png"><link rel="icon" href="/icon-192.png">
+<meta name="theme-color" content="#0c0a10"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="מעקב ביטויים">
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0c0a10;color:#f5f4f7;font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif}
+form{width:min(340px,calc(100% - 32px));background:#15121c;border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:28px 22px;text-align:center}
+img{width:64px;height:64px;border-radius:14px}
+h1{font-size:20px;margin:14px 0 4px}p{color:#a49eb2;font-size:14px;margin:0 0 18px}
+input,button{width:100%;box-sizing:border-box;font:inherit;font-size:16px;border-radius:10px;padding:12px}
+input{background:#1c1826;color:#f5f4f7;border:1px solid rgba(255,255,255,.12);margin-bottom:12px}
+button{background:#7b61ff;color:#fff;border:0;font-weight:600;cursor:pointer}
+.err{color:#ff5c72;font-size:14px;margin-bottom:12px}
+</style></head><body>
+<form method="post" action="/login">
+<img src="/icon-192.png" alt=""><h1>מעקב ביטויים</h1><p>HODIGITAL</p>
+${error ? '<div class="err">סיסמה שגויה, נסי שוב</div>' : ''}
+<input type="password" name="password" placeholder="סיסמה" autocomplete="current-password" required autofocus>
+<button type="submit">כניסה</button>
+</form></body></html>`;
+
+const MANIFEST = JSON.stringify({
+  name: 'מעקב ביטויים · HODIGITAL',
+  short_name: 'מעקב ביטויים',
+  lang: 'he',
+  dir: 'rtl',
+  start_url: '/',
+  scope: '/',
+  display: 'standalone',
+  background_color: '#0c0a10',
+  theme_color: '#0c0a10',
+  icons: [
+    { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+  ],
+});
+
+const ICONS = { '/icon-180.png': ICON_180, '/icon-192.png': ICON_192, '/icon-512.png': ICON_512 };
+const png = (b64) => new Response(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)), {
+  headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=604800' },
+});
+const html = (body, status = 200, extra = {}) => new Response(body, {
+  status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store', ...extra },
+});
 
 export default {
   async fetch(request, env) {
-    if (!authorized(request, env)) {
-      return new Response('נדרשת סיסמה', {
-        status: 401,
-        headers: { 'WWW-Authenticate': 'Basic realm="HODIGITAL", charset="UTF-8"', 'Content-Type': 'text/plain; charset=utf-8' },
+    const path = new URL(request.url).pathname;
+
+    // קבצים ציבוריים שהטלפון צריך כדי להציג אייקון ושם לפני הכניסה
+    if (ICONS[path]) return png(ICONS[path]);
+    if (path === '/manifest.webmanifest') {
+      return new Response(MANIFEST, { headers: { 'Content-Type': 'application/manifest+json; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } });
+    }
+
+    if (path === '/login' && request.method === 'POST') {
+      const form = await request.formData().catch(() => null);
+      const password = String(form?.get('password') || '');
+      if (!env.DASHBOARD_PASSWORD || !safeEqual(password, env.DASHBOARD_PASSWORD)) return html(loginPage(true), 401);
+      return new Response(null, {
+        status: 303,
+        headers: {
+          Location: '/',
+          'Set-Cookie': `${COOKIE}=${await sessionToken(env)}; Path=/; Max-Age=${SESSION_DAYS * 86400}; HttpOnly; Secure; SameSite=Lax`,
+        },
       });
     }
-    const path = new URL(request.url).pathname;
+    if (path === '/logout') {
+      return new Response(null, { status: 303, headers: { Location: '/login', 'Set-Cookie': `${COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax` } });
+    }
+
+    if (!(await authorized(request, env))) {
+      if (path.startsWith('/api/')) return bad('נדרשת כניסה', 401);
+      return html(loginPage(false));
+    }
+    if (path === '/login') return new Response(null, { status: 303, headers: { Location: '/' } });
     if (path.startsWith('/api/')) {
       try { return await api(request, env, path); }
       catch (err) { console.error(err); return bad('שגיאת שרת: ' + err.message, 500); }
     }
-    if (path === '/' || path === '/index.html') {
-      return new Response(dashboard, {
-        headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' },
-      });
-    }
+    if (path === '/' || path === '/index.html') return html(dashboard);
     return new Response('לא נמצא', { status: 404 });
   },
 
